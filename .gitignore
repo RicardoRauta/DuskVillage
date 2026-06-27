@@ -1,0 +1,51 @@
+# Build output
+bin/
+obj/
+[Bb]uild/
+[Rr]elease/
+[Dd]ebug/
+
+# MonoGame content build output and paid/private assets
+DuskVillage/Content/**
+!DuskVillage/Content/
+!DuskVillage/Content/Content.mgcb
+
+# Visual Studio / Rider / VS Code local state
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+.vscode/*.user
+
+# .NET local tool and package caches
+*.nupkg
+packages/
+
+# Logs and diagnostics
+*.log
+*.tlog
+*.binlog
+TestResults/
+coverage/
+
+# Local game/runtime data
+saves/
+Saves/
+*.save
+*.sav
+
+# OS noise
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+~$*
