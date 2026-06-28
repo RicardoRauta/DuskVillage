@@ -26,6 +26,8 @@ public sealed class SaveSlotSummary
 
     public string ErrorMessage { get; set; } = string.Empty;
 
+    public bool CanLoad => Status == SaveSlotStatus.Valid;
+
     public static SaveSlotSummary Empty(int slotNumber, string filePath)
     {
         return new SaveSlotSummary

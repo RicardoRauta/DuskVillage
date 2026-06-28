@@ -61,7 +61,13 @@ The `DuskVillage/Content/Content.mgcb` file is tracked so the MonoGame content p
 
 Actual game assets under `DuskVillage/Content/` are intentionally ignored by Git. This protects paid, licensed, private, prototype, or placeholder assets that should not be redistributed through the public repository.
 
-If you clone the repository, you may need to provide your own local assets later as the project grows.
+The character creator currently uses the Mana Seed Farmer Sprite System / Farmer Base asset pack. The repository does not include this paid/licensed asset. To see the real character sprites locally, download the pack from [Seliel the Shaper - Farmer Base](https://seliel-the-shaper.itch.io/farmer-base) and place the zip here:
+
+```text
+DuskVillage/Content/22.10a - Mana Seed Farmer Sprite System v1.6.zip
+```
+
+The game can still run without this zip. When it is missing, the character preview uses a simple fallback placeholder instead of the Mana Seed sprites.
 
 ## Documentation
 
@@ -69,6 +75,7 @@ If you clone the repository, you may need to provide your own local assets later
 - [MVP Scope](docs/MVP_SCOPE.md)
 - [Technical Design](docs/TECHNICAL_DESIGN.md)
 - [Game Systems Roadmap](docs/GAME_SYSTEMS_ROADMAP.md)
+- [Character Presets](docs/CHARACTER_PRESETS.md)
 
 ## License
 

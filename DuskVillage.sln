@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.37328.6 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DuskVillage", "DuskVillage\DuskVillage.csproj", "{3AD33095-6E76-449B-BAC2-E2CD2F4F5876}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DuskVillage.Tests", "DuskVillage.Tests\DuskVillage.Tests.csproj", "{B0DB4116-4B2F-49F6-8E0C-D0576B764762}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{3AD33095-6E76-449B-BAC2-E2CD2F4F5876}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3AD33095-6E76-449B-BAC2-E2CD2F4F5876}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3AD33095-6E76-449B-BAC2-E2CD2F4F5876}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0DB4116-4B2F-49F6-8E0C-D0576B764762}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0DB4116-4B2F-49F6-8E0C-D0576B764762}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0DB4116-4B2F-49F6-8E0C-D0576B764762}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0DB4116-4B2F-49F6-8E0C-D0576B764762}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

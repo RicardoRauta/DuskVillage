@@ -57,6 +57,30 @@ public sealed class TextInputControl : UiControlBase
         }
 
         draw.Text(label, new Vector2(Bounds.X + 12, Bounds.Y + 11), TextColor(draw, hasFocus));
-        draw.Text(value, new Vector2(Bounds.X + 150, Bounds.Y + 11), TextColor(draw, hasFocus));
+        var labelWidth = draw.Font.MeasureString(label).X * draw.Scale;
+        var maxValueWidth = Bounds.Right - 36 - (Bounds.X + 12 + labelWidth + 34);
+        draw.RightAlignedText(FitTrailing(draw, value, Math.Max(24, maxValueWidth)), Bounds.Right - 36, Bounds.Y + 11, TextColor(draw, hasFocus));
+    }
+
+    private static string FitTrailing(UiDrawContext draw, string text, float maxWidth)
+    {
+        if (draw.Font.MeasureString(text).X * draw.Scale <= maxWidth)
+        {
+            return text;
+        }
+
+        const string ellipsis = "...";
+        var trimmed = text;
+        while (trimmed.Length > 0)
+        {
+            trimmed = trimmed[1..];
+            var candidate = ellipsis + trimmed.TrimStart();
+            if (draw.Font.MeasureString(candidate).X * draw.Scale <= maxWidth)
+            {
+                return candidate;
+            }
+        }
+
+        return ellipsis;
     }
 }

@@ -86,7 +86,8 @@ public sealed class LoadGameScreen : GameScreenBase
             return;
         }
 
-        var session = GameSessionSummary.FromSaveSlot(slot);
+        var saveGame = Context.SaveSlots.LoadGame(slot.SlotNumber);
+        var session = GameSessionSummary.FromSaveSlot(slot, saveGame);
         Context.Navigator.SetRoot(new GameplayPlaceholderScreen(Context, session));
     }
 }

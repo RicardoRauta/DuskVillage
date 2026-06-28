@@ -1,6 +1,8 @@
+using DuskVillage.CharacterAssets;
 using DuskVillage.Core;
 using DuskVillage.Input;
 using DuskVillage.Localization;
+using DuskVillage.Rendering;
 using DuskVillage.Saving;
 using DuskVillage.Screens;
 using DuskVillage.Settings;
@@ -21,6 +23,9 @@ namespace DuskVillage
         private GameSettingsService _settings;
         private LocalizationService _localization;
         private FileSaveSlotProvider _saveSlots;
+        private FileCharacterPresetStorage _characterPresetStorage;
+        private ManaSeedCharacterAssetCatalog _characterAssetCatalog;
+        private CharacterPortraitRenderer _characterPortraitRenderer;
         private GameScreenContext _screenContext;
 
         public Game1()
@@ -58,6 +63,9 @@ namespace DuskVillage
             _menuFont = Content.Load<SpriteFont>("Fonts/Menu");
             _localization = new LocalizationService(GameDirectories.LocalizationDirectory, _settings.Current.General.LanguageCode);
             _saveSlots = new FileSaveSlotProvider(GameDirectories.SavesDirectory);
+            _characterPresetStorage = new FileCharacterPresetStorage(GameDirectories.CharacterPresetsDirectory);
+            _characterAssetCatalog = ManaSeedCharacterAssetCatalog.Load(GameDirectories.ManaSeedFarmerSpriteZipPath);
+            _characterPortraitRenderer = new CharacterPortraitRenderer(GraphicsDevice, _characterAssetCatalog);
 
             _screenContext = new GameScreenContext(
                 _graphics,
@@ -69,6 +77,9 @@ namespace DuskVillage
                 _localization,
                 _settings,
                 _saveSlots,
+                _characterPresetStorage,
+                _characterAssetCatalog,
+                _characterPortraitRenderer,
                 _screenManager,
                 Exit,
                 ApplySettings);
@@ -94,6 +105,7 @@ namespace DuskVillage
 
         protected override void UnloadContent()
         {
+            _characterPortraitRenderer?.Dispose();
             _pixel?.Dispose();
             _spriteBatch?.Dispose();
             base.UnloadContent();

@@ -7,7 +7,6 @@ namespace DuskVillage.Saving;
 
 public sealed class FileSaveSlotProvider : ISaveSlotProvider
 {
-    private const int CurrentSaveVersion = 1;
     private const int SlotCount = 5;
     private readonly string _saveDirectory;
 
@@ -30,6 +29,39 @@ public sealed class FileSaveSlotProvider : ISaveSlotProvider
         return slots;
     }
 
+    public SaveGame LoadGame(int slotNumber)
+    {
+        var filePath = SlotFilePath(slotNumber);
+        var saveGame = SaveGameSerializer.Deserialize(File.ReadAllText(filePath));
+        if (saveGame.Metadata.SaveVersion > SaveMetadata.CurrentSaveVersion)
+        {
+            throw new InvalidDataException("Save file was created by a newer save version.");
+        }
+
+        return saveGame;
+    }
+
+    public void SaveGame(int slotNumber, SaveGame saveGame)
+    {
+        Directory.CreateDirectory(_saveDirectory);
+        saveGame.Touch();
+        File.WriteAllText(SlotFilePath(slotNumber), SaveGameSerializer.Serialize(saveGame));
+    }
+
+    public int FindFirstWritableSlotNumber()
+    {
+        var slots = GetSlots();
+        foreach (var slot in slots)
+        {
+            if (slot.Status == SaveSlotStatus.Empty)
+            {
+                return slot.SlotNumber;
+            }
+        }
+
+        return 1;
+    }
+
     private static SaveSlotSummary ReadSlot(int slotNumber, string filePath)
     {
         if (!File.Exists(filePath))
@@ -44,7 +76,7 @@ public sealed class FileSaveSlotProvider : ISaveSlotProvider
             var metadata = root.TryGetProperty("metadata", out var metadataElement) ? metadataElement : root;
 
             var saveVersion = ReadInt(metadata, "saveVersion", 0);
-            var status = saveVersion > CurrentSaveVersion ? SaveSlotStatus.Incompatible : SaveSlotStatus.Valid;
+            var status = saveVersion > SaveMetadata.CurrentSaveVersion ? SaveSlotStatus.Incompatible : SaveSlotStatus.Valid;
 
             if (saveVersion <= 0)
             {
@@ -110,5 +142,11 @@ public sealed class FileSaveSlotProvider : ISaveSlotProvider
     {
         var value = ReadString(element, propertyName, string.Empty);
         return DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
+    }
+
+    private string SlotFilePath(int slotNumber)
+    {
+        var clamped = Math.Clamp(slotNumber, 1, SlotCount);
+        return Path.Combine(_saveDirectory, $"slot_{clamped}.json");
     }
 }
