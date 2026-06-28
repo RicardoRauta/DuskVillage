@@ -5,20 +5,20 @@ using Microsoft.Xna.Framework.Input;
 
 namespace DuskVillage.UI;
 
-public sealed class KeyBindingControl : UiControlBase, IInputCaptureControl
+public sealed class GamePadBindingControl : UiControlBase, IInputCaptureControl
 {
     private readonly string _labelKey;
-    private readonly Func<Keys> _getKey;
-    private readonly Action<Keys> _setKey;
+    private readonly Func<Buttons> _getButton;
+    private readonly Action<Buttons> _setButton;
     private bool _isCapturing;
 
     public bool IsCapturingInput => _isCapturing;
 
-    public KeyBindingControl(string labelKey, Func<Keys> getKey, Action<Keys> setKey)
+    public GamePadBindingControl(string labelKey, Func<Buttons> getButton, Action<Buttons> setButton)
     {
         _labelKey = labelKey;
-        _getKey = getKey;
-        _setKey = setKey;
+        _getButton = getButton;
+        _setButton = setButton;
     }
 
     public override void Update(GameScreenContext context, bool hasFocus)
@@ -30,23 +30,19 @@ public sealed class KeyBindingControl : UiControlBase, IInputCaptureControl
 
         if (_isCapturing)
         {
-            if (context.Input.Current.GamePadCancelPressedFor(context.Settings.Current.Input.ControllerBack))
+            if (context.Input.Current.WasKeyPressed(Keys.Escape))
             {
                 _isCapturing = false;
                 return;
             }
 
-            var key = context.Input.Current.FirstNewKeyPress();
-            if (!key.HasValue)
+            var button = context.Input.Current.FirstNewButtonPress();
+            if (!button.HasValue)
             {
                 return;
             }
 
-            if (key.Value != Keys.Escape)
-            {
-                _setKey(key.Value);
-            }
-
+            _setButton(button.Value);
             _isCapturing = false;
             return;
         }
@@ -63,7 +59,7 @@ public sealed class KeyBindingControl : UiControlBase, IInputCaptureControl
         draw.Border(Bounds, hasFocus ? draw.Theme.Accent : draw.Theme.Border);
 
         var label = draw.Localization.Text(_labelKey);
-        var value = _isCapturing ? draw.Localization.Text("settings.press_key") : _getKey().ToString();
+        var value = _isCapturing ? draw.Localization.Text("settings.press_button") : _getButton().ToString();
         draw.Text(label, new Vector2(Bounds.X + 12, Bounds.Y + 11), TextColor(draw, hasFocus), 0.9f);
         draw.RightAlignedText(value, Bounds.Right - 36, Bounds.Y + 11, TextColor(draw, hasFocus), 0.9f);
     }

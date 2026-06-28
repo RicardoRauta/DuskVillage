@@ -13,6 +13,21 @@ public sealed class VerticalMenu
 
     public int FocusedIndex => _focusedIndex;
 
+    public void SetFocusedIndex(int index)
+    {
+        if (_controls.Count == 0)
+        {
+            _focusedIndex = 0;
+            return;
+        }
+
+        _focusedIndex = System.Math.Clamp(index, 0, _controls.Count - 1);
+        if (!_controls[_focusedIndex].CanFocus)
+        {
+            MoveFocus(1);
+        }
+    }
+
     public void Clear()
     {
         _controls.Clear();
@@ -50,21 +65,51 @@ public sealed class VerticalMenu
 
         for (var i = 0; i < _controls.Count; i++)
         {
-            if (_controls[i].CanFocus && _controls[i].Bounds.Contains(context.Input.Current.MousePosition))
+            if (_controls[i].CanFocus && IsPointerOverControl(_controls[i], context.Input.Current.MousePosition))
             {
                 _focusedIndex = i;
                 break;
             }
         }
 
-        if (context.Input.Current.MenuDownPressed)
+        if (context.Input.Current.MenuDownPressedFor(context.Settings.Current.Input.ControllerMoveDown))
         {
             MoveFocus(1);
         }
 
-        if (context.Input.Current.MenuUpPressed)
+        if (context.Input.Current.MenuUpPressedFor(context.Settings.Current.Input.ControllerMoveUp))
         {
             MoveFocus(-1);
+        }
+
+        for (var i = 0; i < _controls.Count; i++)
+        {
+            _controls[i].Update(context, i == _focusedIndex);
+        }
+    }
+
+    public void UpdateFocusedControl(GameScreenContext context, bool allowMouseFocus = true)
+    {
+        if (_controls.Count == 0)
+        {
+            return;
+        }
+
+        if (!_controls[_focusedIndex].CanFocus)
+        {
+            MoveFocus(1);
+        }
+
+        if (allowMouseFocus)
+        {
+            for (var i = 0; i < _controls.Count; i++)
+            {
+                if (_controls[i].CanFocus && IsPointerOverControl(_controls[i], context.Input.Current.MousePosition))
+                {
+                    _focusedIndex = i;
+                    break;
+                }
+            }
         }
 
         for (var i = 0; i < _controls.Count; i++)
@@ -101,5 +146,15 @@ public sealed class VerticalMenu
                 return;
             }
         }
+    }
+
+    private static bool IsPointerOverControl(IUiControl control, Point pointer)
+    {
+        if (control.PointerClipBounds.HasValue && !control.PointerClipBounds.Value.Contains(pointer))
+        {
+            return false;
+        }
+
+        return control.Bounds.Contains(pointer);
     }
 }

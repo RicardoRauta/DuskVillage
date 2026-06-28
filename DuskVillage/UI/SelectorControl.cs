@@ -31,12 +31,12 @@ public sealed class SelectorControl : UiControlBase
             return;
         }
 
-        if (hasFocus && context.Input.Current.MenuLeftPressed)
+        if (hasFocus && context.Input.Current.MenuLeftPressedFor(context.Settings.Current.Input.ControllerMoveLeft))
         {
             Move(-1);
         }
 
-        if (hasFocus && (context.Input.Current.MenuRightPressed || context.Input.Current.ConfirmPressed))
+        if (hasFocus && (context.Input.Current.MenuRightPressedFor(context.Settings.Current.Input.ControllerMoveRight) || context.Input.Current.ConfirmPressedFor(context.Settings.Current.Input.ControllerConfirm)))
         {
             Move(1);
         }

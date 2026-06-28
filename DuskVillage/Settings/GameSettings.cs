@@ -44,7 +44,14 @@ public sealed class GameSettings
                 Back = Keys.Escape,
                 Pause = Keys.P,
                 MouseSensitivity = 1f,
-                ControllerSensitivity = 1f
+                ControllerSensitivity = 1f,
+                ControllerConfirm = Buttons.A,
+                ControllerBack = Buttons.B,
+                ControllerPause = Buttons.Start,
+                ControllerMoveUp = Buttons.DPadUp,
+                ControllerMoveDown = Buttons.DPadDown,
+                ControllerMoveLeft = Buttons.DPadLeft,
+                ControllerMoveRight = Buttons.DPadRight
             }
         };
     }
@@ -178,6 +185,20 @@ public sealed class InputSettings
 
     public float ControllerSensitivity { get; set; } = 1f;
 
+    public Buttons ControllerConfirm { get; set; } = Buttons.A;
+
+    public Buttons ControllerBack { get; set; } = Buttons.B;
+
+    public Buttons ControllerPause { get; set; } = Buttons.Start;
+
+    public Buttons ControllerMoveUp { get; set; } = Buttons.DPadUp;
+
+    public Buttons ControllerMoveDown { get; set; } = Buttons.DPadDown;
+
+    public Buttons ControllerMoveLeft { get; set; } = Buttons.DPadLeft;
+
+    public Buttons ControllerMoveRight { get; set; } = Buttons.DPadRight;
+
     public InputSettings Clone()
     {
         return new InputSettings
@@ -190,7 +211,14 @@ public sealed class InputSettings
             Back = Back,
             Pause = Pause,
             MouseSensitivity = MouseSensitivity,
-            ControllerSensitivity = ControllerSensitivity
+            ControllerSensitivity = ControllerSensitivity,
+            ControllerConfirm = ControllerConfirm,
+            ControllerBack = ControllerBack,
+            ControllerPause = ControllerPause,
+            ControllerMoveUp = ControllerMoveUp,
+            ControllerMoveDown = ControllerMoveDown,
+            ControllerMoveLeft = ControllerMoveLeft,
+            ControllerMoveRight = ControllerMoveRight
         };
     }
 }

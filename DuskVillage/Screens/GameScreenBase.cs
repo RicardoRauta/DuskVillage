@@ -55,7 +55,7 @@ public abstract class GameScreenBase : IGameScreen
         var input = Context.Input.Current;
         return input.WasKeyPressed(Keys.Escape) ||
             input.WasKeyPressed(Context.Settings.Current.Input.Back) ||
-            input.GamePadCancelPressed;
+            input.GamePadCancelPressedFor(Context.Settings.Current.Input.ControllerBack);
     }
 
     protected void DrawBackdrop(UiDrawContext draw)

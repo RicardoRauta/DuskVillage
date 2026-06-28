@@ -28,7 +28,7 @@ public sealed class ButtonControl : UiControlBase
             return;
         }
 
-        if ((hasFocus && context.Input.Current.ConfirmPressed) || WasClicked(context))
+        if ((hasFocus && context.Input.Current.ConfirmPressedFor(context.Settings.Current.Input.ControllerConfirm)) || WasClicked(context))
         {
             _clicked();
         }

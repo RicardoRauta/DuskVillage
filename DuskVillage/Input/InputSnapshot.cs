@@ -79,24 +79,57 @@ public sealed class InputSnapshot
 
     public bool ConfirmPressed => WasKeyPressed(Keys.Enter) || WasButtonPressed(Buttons.A) || WasButtonPressed(Buttons.Start);
 
+    public bool ConfirmPressedFor(Buttons controllerButton)
+    {
+        return WasKeyPressed(Keys.Enter) || WasButtonPressed(controllerButton);
+    }
+
     public bool MenuUpPressed =>
         WasKeyPressed(Keys.Up) ||
         GamePadMenuUpPressed;
+
+    public bool MenuUpPressedFor(Buttons controllerButton)
+    {
+        return WasKeyPressed(Keys.Up) || GamePadMenuUpPressed || WasButtonPressed(controllerButton);
+    }
 
     public bool MenuDownPressed =>
         WasKeyPressed(Keys.Down) ||
         WasKeyPressed(Keys.Tab) ||
         GamePadMenuDownPressed;
 
+    public bool MenuDownPressedFor(Buttons controllerButton)
+    {
+        return WasKeyPressed(Keys.Down) ||
+            WasKeyPressed(Keys.Tab) ||
+            GamePadMenuDownPressed ||
+            WasButtonPressed(controllerButton);
+    }
+
     public bool MenuLeftPressed =>
         WasKeyPressed(Keys.Left) ||
         GamePadMenuLeftPressed;
+
+    public bool MenuLeftPressedFor(Buttons controllerButton)
+    {
+        return WasKeyPressed(Keys.Left) || GamePadMenuLeftPressed || WasButtonPressed(controllerButton);
+    }
 
     public bool MenuRightPressed =>
         WasKeyPressed(Keys.Right) ||
         GamePadMenuRightPressed;
 
+    public bool MenuRightPressedFor(Buttons controllerButton)
+    {
+        return WasKeyPressed(Keys.Right) || GamePadMenuRightPressed || WasButtonPressed(controllerButton);
+    }
+
     public bool GamePadCancelPressed => WasButtonPressed(Buttons.B) || WasButtonPressed(Buttons.Back);
+
+    public bool GamePadCancelPressedFor(Buttons controllerButton)
+    {
+        return WasButtonPressed(controllerButton);
+    }
 
     public bool GamePadStartPressed => WasButtonPressed(Buttons.Start);
 
@@ -117,6 +150,19 @@ public sealed class InputSnapshot
     public bool WasButtonPressed(Buttons button)
     {
         return GamePad.IsButtonDown(button) && !PreviousGamePad.IsButtonDown(button);
+    }
+
+    public Buttons? FirstNewButtonPress()
+    {
+        foreach (var button in GamePadButtons)
+        {
+            if (WasButtonPressed(button))
+            {
+                return button;
+            }
+        }
+
+        return null;
     }
 
     public Keys? FirstNewKeyPress()
@@ -188,5 +234,25 @@ public sealed class InputSnapshot
             _ => null
         };
     }
+
+    private static readonly Buttons[] GamePadButtons =
+    {
+        Buttons.A,
+        Buttons.B,
+        Buttons.X,
+        Buttons.Y,
+        Buttons.Back,
+        Buttons.Start,
+        Buttons.LeftShoulder,
+        Buttons.RightShoulder,
+        Buttons.LeftStick,
+        Buttons.RightStick,
+        Buttons.DPadUp,
+        Buttons.DPadDown,
+        Buttons.DPadLeft,
+        Buttons.DPadRight,
+        Buttons.LeftTrigger,
+        Buttons.RightTrigger
+    };
 
 }

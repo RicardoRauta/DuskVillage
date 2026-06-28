@@ -39,12 +39,12 @@ public sealed class SliderControl : UiControlBase
             return;
         }
 
-        if (hasFocus && context.Input.Current.MenuLeftPressed)
+        if (hasFocus && context.Input.Current.MenuLeftPressedFor(context.Settings.Current.Input.ControllerMoveLeft))
         {
             Adjust(-_step);
         }
 
-        if (hasFocus && context.Input.Current.MenuRightPressed)
+        if (hasFocus && context.Input.Current.MenuRightPressedFor(context.Settings.Current.Input.ControllerMoveRight))
         {
             Adjust(_step);
         }

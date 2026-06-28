@@ -17,6 +17,8 @@ public sealed class SettingsScreen : GameScreenBase
     private readonly string _originalLanguage;
     private SettingsTab _activeTab = SettingsTab.Display;
     private ControlsTab _activeControlsTab = ControlsTab.MouseKeyboard;
+    private FocusRegion _focusRegion = FocusRegion.Content;
+    private int _footerFocusIndex = 1;
     private GameSettings _draft;
     private double _savedMessageTimer;
     private int _scrollOffset;
@@ -32,16 +34,31 @@ public sealed class SettingsScreen : GameScreenBase
 
     public override void Update(GameTime gameTime)
     {
-        if (BackRequested())
+        var isCapturingInput = IsFocusedControlCapturingInput();
+        if (!isCapturingInput && BackRequested())
         {
             Cancel();
             return;
         }
 
-        HandleTabInput();
-        HandleScrollInput();
+        if (!isCapturingInput)
+        {
+            HandleTabInput();
+            HandleScrollInput();
+        }
+
         LayoutControls();
-        _menu.Update(Context);
+        if (!isCapturingInput)
+        {
+            HandleSettingsNavigation();
+        }
+
+        if (_focusRegion != FocusRegion.ControlsTabs)
+        {
+            _menu.UpdateFocusedControl(Context, !isCapturingInput);
+        }
+
+        SyncFocusRegionFromFocusedIndex();
         EnsureFocusedControlVisible();
         LayoutControls();
 
@@ -220,6 +237,14 @@ public sealed class SettingsScreen : GameScreenBase
                 () => _draft.Input.ControllerSensitivity,
                 value => _draft.Input.ControllerSensitivity = value,
                 FormatScale));
+
+            _menu.Add(new GamePadBindingControl("settings.controller.confirm", () => _draft.Input.ControllerConfirm, value => _draft.Input.ControllerConfirm = value));
+            _menu.Add(new GamePadBindingControl("settings.controller.back", () => _draft.Input.ControllerBack, value => _draft.Input.ControllerBack = value));
+            _menu.Add(new GamePadBindingControl("settings.controller.pause", () => _draft.Input.ControllerPause, value => _draft.Input.ControllerPause = value));
+            _menu.Add(new GamePadBindingControl("settings.controller.move_up", () => _draft.Input.ControllerMoveUp, value => _draft.Input.ControllerMoveUp = value));
+            _menu.Add(new GamePadBindingControl("settings.controller.move_down", () => _draft.Input.ControllerMoveDown, value => _draft.Input.ControllerMoveDown = value));
+            _menu.Add(new GamePadBindingControl("settings.controller.move_left", () => _draft.Input.ControllerMoveLeft, value => _draft.Input.ControllerMoveLeft = value));
+            _menu.Add(new GamePadBindingControl("settings.controller.move_right", () => _draft.Input.ControllerMoveRight, value => _draft.Input.ControllerMoveRight = value));
             return;
         }
 
@@ -268,6 +293,11 @@ public sealed class SettingsScreen : GameScreenBase
         SetButton(contentCount + 1, startX + buttonWidth + buttonGap, buttonY, buttonWidth);
         SetButton(contentCount + 2, startX + (buttonWidth + buttonGap) * 2, buttonY, buttonWidth);
 
+        if (_focusRegion == FocusRegion.Footer)
+        {
+            _menu.SetFocusedIndex(contentCount + _footerFocusIndex);
+        }
+
         void SetButton(int index, int x, int y, int width)
         {
             if (index < controls.Count)
@@ -276,6 +306,139 @@ public sealed class SettingsScreen : GameScreenBase
                 controls[index].PointerClipBounds = null;
             }
         }
+    }
+
+    private void HandleSettingsNavigation()
+    {
+        var contentCount = ContentControlCount;
+        var input = Context.Input.Current;
+        var settings = Context.Settings.Current.Input;
+        var upPressed = input.MenuUpPressedFor(settings.ControllerMoveUp);
+        var downPressed = input.MenuDownPressedFor(settings.ControllerMoveDown);
+        var leftPressed = input.MenuLeftPressedFor(settings.ControllerMoveLeft);
+        var rightPressed = input.MenuRightPressedFor(settings.ControllerMoveRight);
+
+        if (contentCount == 0)
+        {
+            _focusRegion = FocusRegion.Footer;
+        }
+
+        if (_focusRegion == FocusRegion.ControlsTabs)
+        {
+            if (_activeTab != SettingsTab.Controls)
+            {
+                _focusRegion = FocusRegion.Content;
+                return;
+            }
+
+            if (leftPressed)
+            {
+                ChangeControlsTab(-1);
+                return;
+            }
+
+            if (rightPressed)
+            {
+                ChangeControlsTab(1);
+                return;
+            }
+
+            if (downPressed || upPressed)
+            {
+                _focusRegion = FocusRegion.Content;
+                _menu.SetFocusedIndex(0);
+            }
+
+            return;
+        }
+
+        if (_focusRegion == FocusRegion.Content)
+        {
+            if (_activeTab == SettingsTab.Controls && upPressed && _menu.FocusedIndex <= 0)
+            {
+                _focusRegion = FocusRegion.ControlsTabs;
+                return;
+            }
+
+            if (downPressed && _menu.FocusedIndex >= contentCount - 1)
+            {
+                _focusRegion = FocusRegion.Footer;
+                _footerFocusIndex = 1;
+                _menu.SetFocusedIndex(contentCount + _footerFocusIndex);
+                return;
+            }
+
+            if (upPressed && _menu.FocusedIndex <= 0)
+            {
+                _focusRegion = FocusRegion.Footer;
+                _footerFocusIndex = 1;
+                _menu.SetFocusedIndex(contentCount + _footerFocusIndex);
+                return;
+            }
+
+            if (downPressed)
+            {
+                _menu.SetFocusedIndex(Math.Min(contentCount - 1, _menu.FocusedIndex + 1));
+                return;
+            }
+
+            if (upPressed)
+            {
+                _menu.SetFocusedIndex(Math.Max(0, _menu.FocusedIndex - 1));
+                return;
+            }
+        }
+        else
+        {
+            if (leftPressed)
+            {
+                _footerFocusIndex = Math.Max(0, _footerFocusIndex - 1);
+                _menu.SetFocusedIndex(contentCount + _footerFocusIndex);
+                return;
+            }
+
+            if (rightPressed)
+            {
+                _footerFocusIndex = Math.Min(2, _footerFocusIndex + 1);
+                _menu.SetFocusedIndex(contentCount + _footerFocusIndex);
+                return;
+            }
+
+            if (upPressed || downPressed)
+            {
+                _focusRegion = FocusRegion.Content;
+                _menu.SetFocusedIndex(upPressed ? Math.Max(0, contentCount - 1) : 0);
+            }
+        }
+    }
+
+    private bool IsFocusedControlCapturingInput()
+    {
+        var focusedIndex = _menu.FocusedIndex;
+        if (focusedIndex < 0 || focusedIndex >= _menu.Controls.Count)
+        {
+            return false;
+        }
+
+        return _menu.Controls[focusedIndex] is IInputCaptureControl { IsCapturingInput: true };
+    }
+
+    private void SyncFocusRegionFromFocusedIndex()
+    {
+        if (_focusRegion == FocusRegion.ControlsTabs)
+        {
+            return;
+        }
+
+        var contentCount = ContentControlCount;
+        if (_menu.FocusedIndex >= contentCount)
+        {
+            _focusRegion = FocusRegion.Footer;
+            _footerFocusIndex = Math.Clamp(_menu.FocusedIndex - contentCount, 0, 2);
+            return;
+        }
+
+        _focusRegion = FocusRegion.Content;
     }
 
     private void HandleScrollInput()
@@ -412,9 +575,10 @@ public sealed class SettingsScreen : GameScreenBase
         {
             var bounds = ControlsTabBounds(tab);
             var isActive = tab == _activeControlsTab;
-            draw.Fill(bounds, isActive ? draw.Theme.PanelAlt : draw.Theme.BackgroundTop);
-            draw.Border(bounds, isActive ? draw.Theme.Accent : draw.Theme.Border);
-            draw.CenteredText(T(ControlsTabTitleKey(tab)), bounds, isActive ? draw.Theme.Accent : draw.Theme.Text, 0.82f);
+            var hasFocus = _focusRegion == FocusRegion.ControlsTabs && isActive;
+            draw.Fill(bounds, isActive || hasFocus ? draw.Theme.PanelAlt : draw.Theme.BackgroundTop);
+            draw.Border(bounds, isActive || hasFocus ? draw.Theme.Accent : draw.Theme.Border);
+            draw.CenteredText(T(ControlsTabTitleKey(tab)), bounds, isActive || hasFocus ? draw.Theme.Accent : draw.Theme.Text, 0.82f);
         }
     }
 
@@ -461,6 +625,7 @@ public sealed class SettingsScreen : GameScreenBase
         }
 
         _activeTab = tab;
+        _focusRegion = FocusRegion.Content;
         _scrollOffset = 0;
         BuildControls();
     }
@@ -473,6 +638,22 @@ public sealed class SettingsScreen : GameScreenBase
         }
 
         _activeControlsTab = tab;
+        _focusRegion = FocusRegion.Content;
+        _scrollOffset = 0;
+        BuildControls();
+    }
+
+    private void ChangeControlsTab(int direction)
+    {
+        var tabCount = Enum.GetValues<ControlsTab>().Length;
+        var next = ((int)_activeControlsTab + direction) % tabCount;
+        if (next < 0)
+        {
+            next = tabCount - 1;
+        }
+
+        _activeControlsTab = (ControlsTab)next;
+        _focusRegion = FocusRegion.ControlsTabs;
         _scrollOffset = 0;
         BuildControls();
     }
@@ -555,5 +736,12 @@ public sealed class SettingsScreen : GameScreenBase
     {
         MouseKeyboard,
         Controller
+    }
+
+    private enum FocusRegion
+    {
+        ControlsTabs,
+        Content,
+        Footer
     }
 }

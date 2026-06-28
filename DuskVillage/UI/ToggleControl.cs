@@ -25,7 +25,7 @@ public sealed class ToggleControl : UiControlBase
             return;
         }
 
-        if ((hasFocus && (context.Input.Current.ConfirmPressed || context.Input.Current.WasKeyPressed(Keys.Space))) || WasClicked(context))
+        if ((hasFocus && (context.Input.Current.ConfirmPressedFor(context.Settings.Current.Input.ControllerConfirm) || context.Input.Current.WasKeyPressed(Keys.Space))) || WasClicked(context))
         {
             _setValue(!_getValue());
         }
