@@ -1,52 +1,120 @@
-﻿using Microsoft.Xna.Framework;
+using DuskVillage.Core;
+using DuskVillage.Input;
+using DuskVillage.Localization;
+using DuskVillage.Saving;
+using DuskVillage.Screens;
+using DuskVillage.Settings;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 
 namespace DuskVillage
 {
     public class Game1 : Game
     {
-        private GraphicsDeviceManager _graphics;
+        private readonly GraphicsDeviceManager _graphics;
+        private readonly InputService _input;
+        private readonly ScreenManager _screenManager;
+
         private SpriteBatch _spriteBatch;
+        private Texture2D _pixel;
+        private SpriteFont _menuFont;
+        private GameSettingsService _settings;
+        private LocalizationService _localization;
+        private FileSaveSlotProvider _saveSlots;
+        private GameScreenContext _screenContext;
 
         public Game1()
         {
-            _graphics = new GraphicsDeviceManager(this);
+            _graphics = new GraphicsDeviceManager(this)
+            {
+                PreferredBackBufferWidth = 1280,
+                PreferredBackBufferHeight = 720
+            };
+
+            _input = new InputService();
+            _screenManager = new ScreenManager();
+
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
+            Window.Title = "Dusk Village";
         }
 
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
+            _settings = new GameSettingsService(GameDirectories.SettingsFilePath);
+            _settings.Load();
+            ConfigureDisplay(_settings.Current.Display, applyChanges: false);
 
             base.Initialize();
+            ConfigureDisplay(_settings.Current.Display, applyChanges: true);
         }
 
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
+            _pixel = new Texture2D(GraphicsDevice, 1, 1);
+            _pixel.SetData(new[] { Color.White });
 
-            // TODO: use this.Content to load your game content here
+            _menuFont = Content.Load<SpriteFont>("Fonts/Menu");
+            _localization = new LocalizationService(GameDirectories.LocalizationDirectory, _settings.Current.General.LanguageCode);
+            _saveSlots = new FileSaveSlotProvider(GameDirectories.SavesDirectory);
+
+            _screenContext = new GameScreenContext(
+                _graphics,
+                GraphicsDevice,
+                _spriteBatch,
+                _menuFont,
+                _pixel,
+                _input,
+                _localization,
+                _settings,
+                _saveSlots,
+                _screenManager,
+                Exit,
+                ApplySettings);
+
+            _screenManager.SetRoot(new MainMenuScreen(_screenContext));
         }
 
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-                Exit();
-
-            // TODO: Add your update logic here
+            _input.Update();
+            _screenManager.Update(gameTime);
 
             base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
-
-            // TODO: Add your drawing code here
+            GraphicsDevice.Clear(Color.Black);
+            _screenManager.Draw(gameTime);
 
             base.Draw(gameTime);
+        }
+
+        protected override void UnloadContent()
+        {
+            _pixel?.Dispose();
+            _spriteBatch?.Dispose();
+            base.UnloadContent();
+        }
+
+        private void ApplySettings(GameSettings settings)
+        {
+            ConfigureDisplay(settings.Display, applyChanges: true);
+            _localization?.SetLanguage(settings.General.LanguageCode);
+        }
+
+        private void ConfigureDisplay(DisplaySettings display, bool applyChanges)
+        {
+            _graphics.PreferredBackBufferWidth = display.Width;
+            _graphics.PreferredBackBufferHeight = display.Height;
+            _graphics.IsFullScreen = display.Fullscreen;
+
+            if (applyChanges)
+            {
+                _graphics.ApplyChanges();
+            }
         }
     }
 }

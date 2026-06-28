@@ -9,6 +9,8 @@ obj/
 DuskVillage/Content/**
 !DuskVillage/Content/
 !DuskVillage/Content/Content.mgcb
+!DuskVillage/Content/Fonts/
+!DuskVillage/Content/Fonts/*.spritefont
 
 # Visual Studio / Rider / VS Code local state
 .vs/
