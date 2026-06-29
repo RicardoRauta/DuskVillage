@@ -53,6 +53,8 @@ walk: down, up, right, left
 
 The gameplay placeholder uses this only as an animation preview. Pressing movement input changes the player preview between idle and walk, but map movement, collision, camera, and tile interaction belong to later modules.
 
+The gameplay placeholder also exposes an animation preview screen. It is a temporary testing surface for this module and lets the developer choose clip, direction, playback, reset, and inspect the current cell, frame duration, `flipX`, and timeline position.
+
 ## Rendering
 
 `CharacterSpriteRenderer` draws the active animation cell for every selected appearance layer in paper-doll order.

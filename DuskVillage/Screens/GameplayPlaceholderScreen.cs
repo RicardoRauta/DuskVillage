@@ -26,6 +26,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         _session = session;
         _menu.Add(new ButtonControl("gameplay.advance_hour", AdvanceOneHour));
         _menu.Add(new ButtonControl("gameplay.sleep", SleepToNextDay));
+        _menu.Add(new ButtonControl("gameplay.animations", OpenAnimationPreview));
         _menu.Add(new ButtonControl("gameplay.save", SaveCurrentGame));
         _menu.Add(new ButtonControl("menu.settings", () => Context.Navigator.Push(new SettingsScreen(Context))));
         _menu.Add(new ButtonControl("gameplay.return_menu", ReturnToMainMenu));
@@ -129,6 +130,11 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         _session.SlotNumber = slotNumber;
         _session.SlotId = $"slot_{slotNumber}";
         ShowMessage(T("gameplay.saved", slotNumber));
+    }
+
+    private void OpenAnimationPreview()
+    {
+        Context.Navigator.Push(new CharacterAnimationPreviewScreen(Context, _session.PlayerPreset));
     }
 
     private void ReturnToMainMenu()
