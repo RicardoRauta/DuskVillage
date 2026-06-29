@@ -1,13 +1,14 @@
 using System;
 using DuskVillage.Characters;
 using DuskVillage.Needs;
+using DuskVillage.WorldMap;
 
 namespace DuskVillage.Players;
 
 public static class PlayerRuntimeFactory
 {
     public const string DefaultPlayerEntityId = "player_main";
-    public const string DefaultAreaId = "starter_farm";
+    public const string DefaultAreaId = WorldMapFactory.DefaultAreaId;
 
     public static PlayerRuntimeState CreateNew(CharacterPreset preset)
     {
@@ -71,8 +72,8 @@ public static class PlayerRuntimeFactory
         return new PlayerLocationState
         {
             AreaId = DefaultAreaId,
-            TileX = 7,
-            TileY = 7
+            TileX = WorldMapFactory.DefaultPlayerTileX,
+            TileY = WorldMapFactory.DefaultPlayerTileY
         };
     }
 }

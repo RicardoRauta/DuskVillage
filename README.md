@@ -64,18 +64,18 @@ Actual game assets under `DuskVillage/Content/` are intentionally ignored by Git
 The character creator currently uses the Mana Seed Farmer Sprite System / Farmer Base asset pack. The repository does not include this paid/licensed asset. To see the real character sprites locally, download the pack from [Seliel the Shaper - Farmer Base](https://seliel-the-shaper.itch.io/farmer-base) and place the zip here:
 
 ```text
-DuskVillage/Content/22.10a - Mana Seed Farmer Sprite System v1.6.zip
+DuskVillage/Content/Packs/Characters/22.10a - Mana Seed Farmer Sprite System v1.6.zip
 ```
 
-The game can still run without this zip. When it is missing, the character preview uses a simple fallback placeholder instead of the Mana Seed sprites.
+The runtime searches recursively under `DuskVillage/Content`, so the zip can be kept in another local subfolder if needed. The game can still run without this zip. When it is missing, the character preview uses a simple fallback placeholder instead of the Mana Seed sprites.
 
-Seasonal world visuals are prepared through local Mana Seed forest packs. To enable the real seasonal map tiles later, place these zips in `DuskVillage/Content/`:
+Seasonal world visuals are prepared through local Mana Seed forest packs. To enable the real seasonal map tiles, place these zips in `DuskVillage/Content/Packs/World/Seasonal/`:
 
 ```text
-DuskVillage/Content/20.05c - Spring Forest 4.3.zip
-DuskVillage/Content/20.04c - Summer Forest 4.3.zip
-DuskVillage/Content/20.06a - Autumn Forest 4.3.zip
-DuskVillage/Content/20.07a - Winter Forest 4.3.zip
+DuskVillage/Content/Packs/World/Seasonal/20.05c - Spring Forest 4.3.zip
+DuskVillage/Content/Packs/World/Seasonal/20.04c - Summer Forest 4.3.zip
+DuskVillage/Content/Packs/World/Seasonal/20.06a - Autumn Forest 4.3.zip
+DuskVillage/Content/Packs/World/Seasonal/20.07a - Winter Forest 4.3.zip
 ```
 
 The game code can still run without these zips. Missing seasonal world assets use fallback textures.
@@ -85,6 +85,7 @@ The game code can still run without these zips. Missing seasonal world assets us
 - [Game Design Document](docs/GDD.md)
 - [MVP Scope](docs/MVP_SCOPE.md)
 - [Technical Design](docs/TECHNICAL_DESIGN.md)
+- [Implementation Order](docs/IMPLEMENTATION_ORDER.md)
 - [Game Systems Roadmap](docs/GAME_SYSTEMS_ROADMAP.md)
 - [Character Presets](docs/CHARACTER_PRESETS.md)
 - [Character Animation](docs/CHARACTER_ANIMATION.md)

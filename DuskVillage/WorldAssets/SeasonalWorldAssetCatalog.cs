@@ -215,9 +215,7 @@ public sealed class SeasonalWorldAssetCatalog
             }
         }
 
-        return contentRoots.Count > 0
-            ? Path.GetFullPath(Path.Combine(contentRoots[0], zipFileName))
-            : GameDirectories.ResolveContentFile(zipFileName);
+        return GameDirectories.ResolveContentFile(zipFileName, contentRoots);
     }
 
     private static HashSet<string> ReadEntryNames(string zipPath)

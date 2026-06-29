@@ -26,21 +26,24 @@ public sealed class WorldMapRenderer
         WorldMapState map,
         string seasonId,
         Rectangle bounds,
-        Point? highlightedTile)
+        Point? highlightedTile,
+        Vector2? focusTile = null,
+        bool fillViewport = false)
     {
         var normalized = WorldMapFactory.Normalize(map);
-        var tileSize = Math.Max(8, Math.Min(bounds.Width / normalized.Width, bounds.Height / normalized.Height));
-        var mapBounds = new Rectangle(
-            bounds.X + (bounds.Width - normalized.Width * tileSize) / 2,
-            bounds.Y + (bounds.Height - normalized.Height * tileSize) / 2,
-            normalized.Width * tileSize,
-            normalized.Height * tileSize);
-        var viewport = new WorldMapViewport(mapBounds, tileSize);
+        var viewport = fillViewport
+            ? CreateCameraViewport(normalized, bounds, focusTile)
+            : CreateFitViewport(normalized, bounds);
+        var mapBounds = viewport.Bounds;
 
         var terrain = GetTerrainTexture(seasonId);
         foreach (var tile in normalized.Tiles)
         {
-            DrawTile(draw, terrain, tile, viewport.TileBounds(tile.X, tile.Y));
+            var destination = viewport.TileBounds(tile.X, tile.Y);
+            if (destination.Intersects(bounds))
+            {
+                DrawTile(draw, terrain, tile, destination);
+            }
         }
 
         if (highlightedTile.HasValue &&
@@ -54,6 +57,50 @@ public sealed class WorldMapRenderer
 
         draw.Border(mapBounds, draw.Theme.Border);
         return viewport;
+    }
+
+    private static WorldMapViewport CreateFitViewport(WorldMapState map, Rectangle bounds)
+    {
+        var tileSize = Math.Max(8, Math.Min(bounds.Width / map.Width, bounds.Height / map.Height));
+        var mapBounds = new Rectangle(
+            bounds.X + (bounds.Width - map.Width * tileSize) / 2,
+            bounds.Y + (bounds.Height - map.Height * tileSize) / 2,
+            map.Width * tileSize,
+            map.Height * tileSize);
+
+        return new WorldMapViewport(mapBounds, tileSize);
+    }
+
+    private static WorldMapViewport CreateCameraViewport(WorldMapState map, Rectangle bounds, Vector2? focusTile)
+    {
+        var tileSize = Math.Max(8, (int)Math.Ceiling(Math.Max(
+            bounds.Width / (double)map.Width,
+            bounds.Height / (double)map.Height)));
+        var mapWidth = map.Width * tileSize;
+        var mapHeight = map.Height * tileSize;
+        var mapX = bounds.X + (bounds.Width - mapWidth) / 2;
+        var mapY = bounds.Y + (bounds.Height - mapHeight) / 2;
+
+        if (focusTile.HasValue)
+        {
+            mapX = (int)Math.Round(bounds.X + bounds.Width / 2f - (focusTile.Value.X + 0.5f) * tileSize);
+            mapY = (int)Math.Round(bounds.Y + bounds.Height / 2f - (focusTile.Value.Y + 0.5f) * tileSize);
+        }
+
+        mapX = ClampMapOffset(mapX, bounds.X, bounds.Width, mapWidth);
+        mapY = ClampMapOffset(mapY, bounds.Y, bounds.Height, mapHeight);
+
+        return new WorldMapViewport(new Rectangle(mapX, mapY, mapWidth, mapHeight), tileSize);
+    }
+
+    private static int ClampMapOffset(int offset, int viewportStart, int viewportLength, int mapLength)
+    {
+        if (mapLength <= viewportLength)
+        {
+            return viewportStart + (viewportLength - mapLength) / 2;
+        }
+
+        return Math.Clamp(offset, viewportStart + viewportLength - mapLength, viewportStart);
     }
 
     private Texture2D GetTerrainTexture(string seasonId)

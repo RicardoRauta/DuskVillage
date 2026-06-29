@@ -36,4 +36,4 @@ The map module can later replace placeholder area/tile values with real world co
 
 ## Save Compatibility
 
-Old saves that only contain `entityId` and `characterPreset` normalize into a complete runtime state when loaded. Missing needs are copied from the character preset, money defaults to `0`, and location defaults to `dusk_village (0, 0)`.
+Old saves that only contain `entityId` and `characterPreset` normalize into a complete runtime state when loaded. Missing needs are copied from the character preset, money defaults to `0`, and location defaults to `starter_farm (7, 6)`.

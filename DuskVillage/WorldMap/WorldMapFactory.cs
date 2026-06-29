@@ -10,7 +10,7 @@ public static class WorldMapFactory
     public const int DefaultWidth = 16;
     public const int DefaultHeight = 12;
     public const int DefaultPlayerTileX = 7;
-    public const int DefaultPlayerTileY = 7;
+    public const int DefaultPlayerTileY = 6;
 
     public static WorldMapState CreateDefault()
     {

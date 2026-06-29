@@ -18,11 +18,19 @@ namespace DuskVillage.Screens;
 
 public sealed class GameplayPlaceholderScreen : GameScreenBase
 {
+    private const double MovementDurationSeconds = 0.22;
+
     private readonly GameSessionSummary _session;
     private readonly VerticalMenu _menu = new();
     private readonly CharacterAnimationState _playerAnimation = new();
+    private Vector2 _visualTilePosition;
+    private Vector2 _movementStartTile;
+    private Vector2 _movementEndTile;
     private double _messageTimer;
     private double _movementAnimationTimer;
+    private double _movementElapsedSeconds;
+    private double _blockedMovementTimer;
+    private bool _isMoving;
     private string _message = string.Empty;
 
     public GameplayPlaceholderScreen(GameScreenContext context, GameSessionSummary session)
@@ -31,6 +39,9 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         _session = session;
         _session.WorldMap = WorldMapFactory.Normalize(_session.WorldMap);
         NormalizePlayerLocation();
+        _visualTilePosition = new Vector2(_session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY);
+        _movementStartTile = _visualTilePosition;
+        _movementEndTile = _visualTilePosition;
 
         _menu.Add(new ButtonControl("action.plant_seeds", () => ExecuteMapAction("action_plant_seeds")));
         _menu.Add(new ButtonControl("action.water", () => ExecuteMapAction("action_water")));
@@ -52,8 +63,13 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         }
 
         LayoutMenu();
+        UpdateMovementInterpolation(gameTime);
         var moved = HandleMovement();
-        HandleActionHotkeys();
+        if (!_isMoving)
+        {
+            HandleActionHotkeys();
+        }
+
         UpdatePlayerAnimation(gameTime, moved);
         _menu.Update(Context);
 
@@ -61,36 +77,42 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         {
             _messageTimer -= gameTime.ElapsedGameTime.TotalSeconds;
         }
+
+        if (_blockedMovementTimer > 0)
+        {
+            _blockedMovementTimer -= gameTime.ElapsedGameTime.TotalSeconds;
+        }
     }
 
     public override void Draw(GameTime gameTime)
     {
         var draw = BeginUi();
         DrawBackdrop(draw);
-        DrawScreenTitle(draw, "gameplay.title");
 
         var layout = Layout();
-        draw.Fill(layout.MapPanel, draw.Theme.Panel);
-        draw.Border(layout.MapPanel, draw.Theme.Border);
-        draw.Fill(layout.InfoPanel, draw.Theme.Panel);
-        draw.Border(layout.InfoPanel, draw.Theme.Border);
-
         var target = TargetTile();
         var viewport = Context.WorldMapRenderer.Draw(
             draw,
             _session.WorldMap,
             _session.WorldTime.CurrentSeason,
-            new Rectangle(layout.MapPanel.X + 18, layout.MapPanel.Y + 18, layout.MapPanel.Width - 36, layout.MapPanel.Height - 36),
-            new Point(target.X, target.Y));
+            Context.ViewBounds,
+            new Point(target.X, target.Y),
+            _visualTilePosition,
+            fillViewport: true);
 
         DrawPlayer(draw, viewport);
+
+        draw.Fill(layout.InfoPanel, draw.Theme.Panel);
+        draw.Border(layout.InfoPanel, draw.Theme.Border);
+        draw.Fill(layout.MenuPanel, draw.Theme.Panel);
+        draw.Border(layout.MenuPanel, draw.Theme.Border);
         DrawInfoPanel(draw, layout.InfoPanel, target);
         _menu.Draw(draw);
 
         if (_messageTimer > 0 && !string.IsNullOrWhiteSpace(_message))
         {
             var size = Context.Font.MeasureString(_message) * UiScale * 0.82f;
-            draw.Text(_message, new Vector2(layout.MapPanel.X + (layout.MapPanel.Width - size.X) / 2f, layout.MapPanel.Bottom + 10), draw.Theme.Accent, 0.82f);
+            draw.Text(_message, new Vector2((Context.ViewBounds.Width - size.X) / 2f, Context.ViewBounds.Bottom - 58), draw.Theme.Accent, 0.82f);
         }
 
         EndUi();
@@ -98,6 +120,11 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private bool HandleMovement()
     {
+        if (_isMoving)
+        {
+            return false;
+        }
+
         var direction = ReadMovementDirection(Context.Input.Current);
         if (!direction.HasValue)
         {
@@ -108,12 +135,22 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         var result = WorldMapTargetResolver.TryMove(_session.WorldMap, _session.PlayerState.Location, direction.Value);
         if (!result.Moved)
         {
-            ShowMessage(T(result.MessageKey));
+            if (_blockedMovementTimer <= 0)
+            {
+                ShowMessage(T(result.MessageKey));
+                _blockedMovementTimer = 0.2;
+            }
+
             return false;
         }
 
+        _movementStartTile = _visualTilePosition;
+        _movementEndTile = new Vector2(result.Location.TileX, result.Location.TileY);
+        _movementElapsedSeconds = 0;
+        _isMoving = true;
+        _blockedMovementTimer = 0;
         _session.PlayerState.Location = result.Location;
-        _movementAnimationTimer = 0.18;
+        _movementAnimationTimer = MovementDurationSeconds;
         return true;
     }
 
@@ -133,6 +170,11 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private void ExecuteMapAction(string actionId)
     {
+        if (_isMoving)
+        {
+            return;
+        }
+
         var target = TargetTile();
         var request = new GameActionRequest
         {
@@ -214,10 +256,14 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private void DrawPlayer(UiDrawContext draw, WorldMapViewport viewport)
     {
-        var location = _session.PlayerState.Location;
-        var tile = viewport.TileBounds(location.TileX, location.TileY);
-        var size = Math.Clamp(viewport.TileSize * 2, 60, 92);
-        var bounds = new Rectangle(tile.Center.X - size / 2, tile.Bottom - size + 6, size, size);
+        var tileCenterX = viewport.Bounds.X + (_visualTilePosition.X + 0.5f) * viewport.TileSize;
+        var tileBottomY = viewport.Bounds.Y + (_visualTilePosition.Y + 1f) * viewport.TileSize;
+        var size = Math.Clamp(viewport.TileSize * 2, 72, 128);
+        var bounds = new Rectangle(
+            (int)Math.Round(tileCenterX - size / 2f),
+            (int)Math.Round(tileBottomY - size + viewport.TileSize * 0.08f),
+            size,
+            size);
         Context.CharacterSpriteRenderer.Draw(draw, _session.PlayerPreset.Appearance, _playerAnimation, bounds);
     }
 
@@ -249,20 +295,22 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     private void LayoutMenu()
     {
         var layout = Layout();
-        _menu.Arrange(layout.InfoPanel.X + 18, layout.InfoPanel.Y + 260, layout.InfoPanel.Width - 36, 38, 8);
+        _menu.Arrange(layout.MenuPanel.X + 12, layout.MenuPanel.Y + 12, layout.MenuPanel.Width - 24, 34, 6);
     }
 
     private ScreenLayout Layout()
     {
         var bounds = Context.ViewBounds;
-        var totalWidth = Math.Min(bounds.Width - 64, 1160);
-        var mapWidth = Math.Min(760, totalWidth - 360);
-        var panelHeight = Math.Min(540, bounds.Height - 154);
-        var x = CenterX(bounds, totalWidth);
-        var y = 112;
+        var margin = Math.Max(16, (int)(24 * UiScale));
+        var availableWidth = Math.Max(220, bounds.Width - margin * 2);
+        var availableHeight = Math.Max(220, bounds.Height - margin * 2);
+        var infoWidth = Math.Min(380, availableWidth);
+        var infoHeight = Math.Min(250, availableHeight);
+        var menuWidth = Math.Min(268, availableWidth);
+        var menuHeight = Math.Min(410, availableHeight);
         return new ScreenLayout(
-            new Rectangle(x, y, mapWidth, panelHeight),
-            new Rectangle(x + mapWidth + 18, y, totalWidth - mapWidth - 18, panelHeight));
+            new Rectangle(bounds.X + margin, bounds.Y + margin, infoWidth, infoHeight),
+            new Rectangle(bounds.Right - margin - menuWidth, bounds.Y + margin, menuWidth, menuHeight));
     }
 
     private (int X, int Y) TargetTile()
@@ -301,6 +349,26 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         return T("gameplay.time_advanced");
     }
 
+    private void UpdateMovementInterpolation(GameTime gameTime)
+    {
+        if (!_isMoving)
+        {
+            _visualTilePosition = new Vector2(_session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY);
+            return;
+        }
+
+        _movementElapsedSeconds += gameTime.ElapsedGameTime.TotalSeconds;
+        var progress = (float)Math.Clamp(_movementElapsedSeconds / MovementDurationSeconds, 0, 1);
+        var eased = progress * progress * (3f - 2f * progress);
+        _visualTilePosition = Vector2.Lerp(_movementStartTile, _movementEndTile, eased);
+
+        if (progress >= 1f)
+        {
+            _visualTilePosition = _movementEndTile;
+            _isMoving = false;
+        }
+    }
+
     private void UpdatePlayerAnimation(GameTime gameTime, bool moved)
     {
         if (moved)
@@ -323,42 +391,30 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     private CharacterFacingDirection? ReadMovementDirection(InputSnapshot input)
     {
         var settings = Context.Settings.Current.Input;
-        if (input.WasKeyPressed(settings.MoveUp))
+        if (input.IsKeyDown(settings.MoveUp) ||
+            input.GamePad.IsButtonDown(settings.ControllerMoveUp) ||
+            input.GamePad.ThumbSticks.Left.Y > 0.5f)
         {
             return CharacterFacingDirection.Up;
         }
 
-        if (input.WasKeyPressed(settings.MoveDown))
+        if (input.IsKeyDown(settings.MoveDown) ||
+            input.GamePad.IsButtonDown(settings.ControllerMoveDown) ||
+            input.GamePad.ThumbSticks.Left.Y < -0.5f)
         {
             return CharacterFacingDirection.Down;
         }
 
-        if (input.WasKeyPressed(settings.MoveRight))
+        if (input.IsKeyDown(settings.MoveRight) ||
+            input.GamePad.IsButtonDown(settings.ControllerMoveRight) ||
+            input.GamePad.ThumbSticks.Left.X > 0.5f)
         {
             return CharacterFacingDirection.Right;
         }
 
-        if (input.WasKeyPressed(settings.MoveLeft))
-        {
-            return CharacterFacingDirection.Left;
-        }
-
-        if (input.WasButtonPressed(Buttons.DPadUp))
-        {
-            return CharacterFacingDirection.Up;
-        }
-
-        if (input.WasButtonPressed(Buttons.DPadDown))
-        {
-            return CharacterFacingDirection.Down;
-        }
-
-        if (input.WasButtonPressed(Buttons.DPadRight))
-        {
-            return CharacterFacingDirection.Right;
-        }
-
-        if (input.WasButtonPressed(Buttons.DPadLeft))
+        if (input.IsKeyDown(settings.MoveLeft) ||
+            input.GamePad.IsButtonDown(settings.ControllerMoveLeft) ||
+            input.GamePad.ThumbSticks.Left.X < -0.5f)
         {
             return CharacterFacingDirection.Left;
         }
@@ -385,5 +441,5 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
             : $"{preset.Name} {preset.FamilyName}";
     }
 
-    private readonly record struct ScreenLayout(Rectangle MapPanel, Rectangle InfoPanel);
+    private readonly record struct ScreenLayout(Rectangle InfoPanel, Rectangle MenuPanel);
 }

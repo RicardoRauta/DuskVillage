@@ -14,7 +14,7 @@ path tiles
 soil plot for early farming
 ```
 
-The player starts at `starter_farm (7, 7)`. Movement is tile-based and blocked by non-passable tiles such as water.
+The player starts at `starter_farm (7, 6)`, just below the starter soil plot. Movement remains tile-based in world state and save data, but the gameplay screen interpolates the rendered character between tiles so walking feels smooth. Non-passable tiles such as water still block movement.
 
 ## Tile Data
 
@@ -52,6 +52,8 @@ The base `GameActionSystem` still handles actor state such as time, energy, hung
 
 ## Rendering
 
-`WorldMapRenderer` draws the map from pure `WorldMapState`. It uses `WorldAssets` for seasonal terrain when local zips are present and falls back to generated colors when paid/local assets are missing.
+`WorldMapRenderer` draws the map from pure `WorldMapState`. It supports a fitted preview mode and a full-screen camera mode for gameplay. The camera mode fills the viewport, follows the visual player tile, and can crop map edges without changing the underlying map data.
+
+The renderer uses `WorldAssets` for seasonal terrain when local zips are present and falls back to generated colors when paid/local assets are missing.
 
 The renderer is intentionally separate from `WorldMap` so maps can later be rendered by different cameras, editors, debug screens, or mod tools without changing gameplay rules.

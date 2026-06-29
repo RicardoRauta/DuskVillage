@@ -38,9 +38,7 @@ public static class GameDirectories
         "Data",
         "WorldAssets");
 
-    public static string ManaSeedFarmerSpriteZipPath =>
-        ManaSeedFarmerSpriteZipCandidates.FirstOrDefault(File.Exists) ??
-        ManaSeedFarmerSpriteZipCandidates[0];
+    public static string ManaSeedFarmerSpriteZipPath => ResolveContentFile(ManaSeedFarmerSpriteZipFileName);
 
     public static IReadOnlyList<string> ContentRootCandidates { get; } =
     [
@@ -60,10 +58,42 @@ public static class GameDirectories
 
     public static string ResolveContentFile(string fileName)
     {
-        return ContentRootCandidates
-            .Select(root => FullPath(root, fileName))
-            .FirstOrDefault(File.Exists) ??
-            FullPath(ContentRootCandidates[0], fileName);
+        return ResolveContentFile(fileName, ContentRootCandidates);
+    }
+
+    public static string ResolveContentFile(string fileName, IEnumerable<string> contentRoots)
+    {
+        var relativeFileName = string.IsNullOrWhiteSpace(fileName) ? string.Empty : fileName.Trim();
+        var normalizedFileName = Path.GetFileName(relativeFileName);
+        var roots = (contentRoots ?? [])
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Select(Path.GetFullPath)
+            .ToArray();
+
+        foreach (var root in roots)
+        {
+            var candidate = FullPath(root, relativeFileName);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        foreach (var root in roots.Where(Directory.Exists))
+        {
+            var match = Directory.EnumerateFiles(root, normalizedFileName, SearchOption.AllDirectories)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(match))
+            {
+                return Path.GetFullPath(match);
+            }
+        }
+
+        return roots.Length > 0
+            ? FullPath(roots[0], relativeFileName)
+            : Path.GetFullPath(relativeFileName);
     }
 
     private static string FullPath(params string[] parts)

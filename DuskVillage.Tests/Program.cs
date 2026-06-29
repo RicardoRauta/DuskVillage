@@ -2,6 +2,7 @@ using DuskVillage.Animations;
 using DuskVillage.Actions;
 using DuskVillage.CharacterAssets;
 using DuskVillage.Characters;
+using DuskVillage.Core;
 using DuskVillage.Needs;
 using DuskVillage.Players;
 using DuskVillage.Saving;
@@ -25,6 +26,7 @@ var tests = new (string Name, Action Run)[]
     ("World clock forces day end after late night", WorldClockForcesDayEndAfterLateNight),
     ("World calendar rolls season and year", WorldCalendarRollsSeasonAndYear),
     ("Seasonal world asset catalog loads stable IDs", SeasonalWorldAssetCatalogLoadsStableIds),
+    ("Content resolver finds nested local packs", ContentResolverFindsNestedLocalPacks),
     ("Seasonal world asset catalog supports missing zips", SeasonalWorldAssetCatalogSupportsMissingZips),
     ("World map default has farm plot", WorldMapDefaultHasFarmPlot),
     ("World map movement respects passability", WorldMapMovementRespectsPassability),
@@ -231,8 +233,9 @@ static void SeasonalWorldAssetCatalogLoadsStableIds()
     {
         var definitionsDirectory = Path.Combine(root, "definitions");
         var contentDirectory = Path.Combine(root, "content");
+        var seasonalPacksDirectory = Path.Combine(contentDirectory, "Packs", "World", "Seasonal");
         Directory.CreateDirectory(definitionsDirectory);
-        Directory.CreateDirectory(contentDirectory);
+        Directory.CreateDirectory(seasonalPacksDirectory);
 
         File.WriteAllText(Path.Combine(definitionsDirectory, "seasonal_assets.json"), """
         [
@@ -252,7 +255,7 @@ static void SeasonalWorldAssetCatalogLoadsStableIds()
         ]
         """);
         CreateZipWithEntries(
-            Path.Combine(contentDirectory, "spring.zip"),
+            Path.Combine(seasonalPacksDirectory, "spring.zip"),
             "spring sheets/spring forest wang tiles.png");
 
         var catalog = SeasonalWorldAssetCatalog.LoadFromDirectories([definitionsDirectory], [contentDirectory]);
@@ -269,6 +272,26 @@ static void SeasonalWorldAssetCatalogLoadsStableIds()
         Assert(asset.ZipExists, "Asset should report existing zip.");
         Assert(asset.EntryExists, "Asset should report existing zip entry.");
         Assert(asset.IsAvailable, "Asset should be available when zip and entry exist.");
+    }
+    finally
+    {
+        DeleteTempDirectory(root);
+    }
+}
+
+static void ContentResolverFindsNestedLocalPacks()
+{
+    var root = CreateTempDirectory();
+    try
+    {
+        var contentDirectory = Path.Combine(root, "content");
+        var nestedDirectory = Path.Combine(contentDirectory, "Packs", "World", "Seasonal");
+        Directory.CreateDirectory(nestedDirectory);
+        File.WriteAllBytes(Path.Combine(nestedDirectory, "spring.zip"), [0, 1, 2, 3]);
+
+        var resolved = GameDirectories.ResolveContentFile("spring.zip", [contentDirectory]);
+
+        AssertEqual(Path.Combine(nestedDirectory, "spring.zip"), resolved, "Resolver should find packs organized in nested folders.");
     }
     finally
     {
