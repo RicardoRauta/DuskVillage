@@ -1,5 +1,6 @@
 using DuskVillage.CharacterAssets;
 using DuskVillage.Characters;
+using DuskVillage.Players;
 using DuskVillage.Saving;
 using DuskVillage.World;
 
@@ -17,6 +18,8 @@ var tests = new (string Name, Action Run)[]
     ("World clock formats past midnight", WorldClockFormatsPastMidnight),
     ("World clock forces day end after late night", WorldClockForcesDayEndAfterLateNight),
     ("World calendar rolls season and year", WorldCalendarRollsSeasonAndYear),
+    ("Player runtime starts from preset needs", PlayerRuntimeStartsFromPresetNeeds),
+    ("Old save player runtime normalizes", OldSavePlayerRuntimeNormalizes),
     ("Old save world time normalizes", OldSaveWorldTimeNormalizes),
     ("Save game round-trips character preset", SaveGameRoundTripsCharacterPreset)
 };
@@ -220,6 +223,65 @@ static void OldSaveWorldTimeNormalizes()
     AssertEqual(1, loaded.WorldState.Year, "Legacy save year should be derived.");
 }
 
+static void PlayerRuntimeStartsFromPresetNeeds()
+{
+    var preset = CharacterPresetFactory.CreateDefault();
+    preset.Needs.Energy = 72;
+    preset.Needs.Hunger = 64;
+
+    var runtime = PlayerRuntimeFactory.CreateNew(preset);
+
+    AssertEqual(PlayerRuntimeFactory.DefaultPlayerEntityId, runtime.EntityId, "Runtime should use the default player entity.");
+    AssertEqual(72, runtime.Needs.Energy, "Runtime needs should start from preset needs.");
+    AssertEqual(64, runtime.Needs.Hunger, "Runtime hunger should start from preset needs.");
+    AssertEqual(0, runtime.Money, "Runtime money should start at zero.");
+    AssertEqual(PlayerRuntimeFactory.DefaultAreaId, runtime.Location.AreaId, "Runtime location should start at the default area.");
+
+    runtime.Needs.Energy = 10;
+    AssertEqual(72, preset.Needs.Energy, "Changing runtime needs should not mutate preset needs.");
+}
+
+static void OldSavePlayerRuntimeNormalizes()
+{
+    const string json = """
+    {
+      "metadata": {
+        "saveVersion": 1,
+        "gameVersion": "0.1.0",
+        "playerName": "Legacy"
+      },
+      "worldState": {
+        "day": 1,
+        "timeMinutes": 360
+      },
+      "playerState": {
+        "entityId": "player_main",
+        "characterPreset": {
+          "name": "Legacy",
+          "needs": {
+            "energy": 81,
+            "maxEnergy": 100,
+            "hunger": 77,
+            "maxHunger": 100,
+            "health": 96,
+            "maxHealth": 100,
+            "mood": 62,
+            "maxMood": 100
+          }
+        }
+      }
+    }
+    """;
+
+    var loaded = SaveGameSerializer.Deserialize(json);
+
+    AssertEqual("Legacy", loaded.PlayerState.CharacterPreset.Name, "Legacy save should keep player name.");
+    AssertEqual(81, loaded.PlayerState.Needs.Energy, "Missing runtime needs should be copied from preset needs.");
+    AssertEqual(77, loaded.PlayerState.Needs.Hunger, "Missing runtime hunger should be copied from preset needs.");
+    AssertEqual(0, loaded.PlayerState.Money, "Missing money should default to zero.");
+    AssertEqual(PlayerRuntimeFactory.DefaultAreaId, loaded.PlayerState.Location.AreaId, "Missing location should default.");
+}
+
 static void SaveGameRoundTripsCharacterPreset()
 {
     var preset = CharacterPresetFactory.CreateDefault();
@@ -233,6 +295,12 @@ static void SaveGameRoundTripsCharacterPreset()
         Day = 113,
         TimeMinutes = 75
     });
+    saveGame.PlayerState.Money = 42;
+    saveGame.PlayerState.Needs.Energy = 34;
+    saveGame.PlayerState.Needs.Hunger = 56;
+    saveGame.PlayerState.Location.AreaId = "starter_farm";
+    saveGame.PlayerState.Location.TileX = 7;
+    saveGame.PlayerState.Location.TileY = 9;
 
     var json = SaveGameSerializer.Serialize(saveGame);
     var loaded = SaveGameSerializer.Deserialize(json);
@@ -244,6 +312,12 @@ static void SaveGameRoundTripsCharacterPreset()
     AssertEqual("01:15", loaded.WorldState.CurrentTime, "Save should keep world time.");
     AssertEqual(WorldCalendarRules.Spring, loaded.WorldState.CurrentSeason, "Save should keep normalized season.");
     AssertEqual(2, loaded.WorldState.Year, "Save should keep normalized year.");
+    AssertEqual(42, loaded.PlayerState.Money, "Save should keep runtime money.");
+    AssertEqual(34, loaded.PlayerState.Needs.Energy, "Save should keep runtime energy.");
+    AssertEqual(56, loaded.PlayerState.Needs.Hunger, "Save should keep runtime hunger.");
+    AssertEqual("starter_farm", loaded.PlayerState.Location.AreaId, "Save should keep runtime area.");
+    AssertEqual(7, loaded.PlayerState.Location.TileX, "Save should keep runtime tile X.");
+    AssertEqual(9, loaded.PlayerState.Location.TileY, "Save should keep runtime tile Y.");
 }
 
 static void Assert(bool condition, string message)

@@ -1,4 +1,5 @@
 using DuskVillage.Characters;
+using DuskVillage.Players;
 using DuskVillage.Saving;
 using DuskVillage.World;
 
@@ -8,7 +9,17 @@ public sealed class GameSessionSummary
 {
     public string Source { get; set; } = "new_game";
 
-    public CharacterPreset PlayerPreset { get; set; } = CharacterPresetFactory.CreateDefault();
+    public PlayerRuntimeState PlayerState { get; set; } = PlayerRuntimeFactory.CreateNew(CharacterPresetFactory.CreateDefault());
+
+    public CharacterPreset PlayerPreset
+    {
+        get => PlayerState.CharacterPreset;
+        set
+        {
+            PlayerState.CharacterPreset = value ?? CharacterPresetFactory.CreateDefault();
+            PlayerRuntimeFactory.Normalize(PlayerState);
+        }
+    }
 
     public string PlayerName { get; set; } = "Alden";
 
@@ -30,10 +41,11 @@ public sealed class GameSessionSummary
     {
         var preset = options.CharacterPreset.Clone();
         CharacterPresetSerializer.Normalize(preset);
+        var playerState = PlayerRuntimeFactory.CreateNew(preset);
         return new GameSessionSummary
         {
             Source = "new_game",
-            PlayerPreset = preset,
+            PlayerState = playerState,
             PlayerName = preset.Name,
             AgeCategoryId = preset.AgeCategoryId,
             OriginId = preset.OriginId,
@@ -43,12 +55,14 @@ public sealed class GameSessionSummary
 
     public static GameSessionSummary FromSaveSlot(SaveSlotSummary slot, SaveGame saveGame)
     {
-        var preset = saveGame.PlayerState.CharacterPreset.Clone();
+        var playerState = PlayerRuntimeFactory.Clone(saveGame.PlayerState);
+        var preset = playerState.CharacterPreset.Clone();
         CharacterPresetSerializer.Normalize(preset);
+        playerState.CharacterPreset = preset;
         return new GameSessionSummary
         {
             Source = "save_slot",
-            PlayerPreset = preset,
+            PlayerState = playerState,
             PlayerName = string.IsNullOrWhiteSpace(preset.Name) ? slot.PlayerName : preset.Name,
             SlotId = slot.SlotId,
             SlotNumber = slot.SlotNumber,

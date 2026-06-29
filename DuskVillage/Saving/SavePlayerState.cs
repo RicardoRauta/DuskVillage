@@ -1,10 +1,35 @@
 using DuskVillage.Characters;
+using DuskVillage.Players;
 
 namespace DuskVillage.Saving;
 
-public sealed class SavePlayerState
+public sealed class SavePlayerState : PlayerRuntimeState
 {
-    public string EntityId { get; set; } = "player_main";
+    public static SavePlayerState CreateNew(CharacterPreset preset)
+    {
+        return FromRuntimeState(PlayerRuntimeFactory.CreateNew(preset));
+    }
 
-    public CharacterPreset CharacterPreset { get; set; } = CharacterPresetFactory.CreateDefault();
+    public static SavePlayerState FromRuntimeState(PlayerRuntimeState state)
+    {
+        var normalized = PlayerRuntimeFactory.Clone(state);
+        return new SavePlayerState
+        {
+            EntityId = normalized.EntityId,
+            CharacterPreset = normalized.CharacterPreset,
+            Needs = normalized.Needs,
+            Money = normalized.Money,
+            Location = normalized.Location
+        };
+    }
+
+    public void Apply(PlayerRuntimeState state)
+    {
+        var normalized = PlayerRuntimeFactory.Clone(state);
+        EntityId = normalized.EntityId;
+        CharacterPreset = normalized.CharacterPreset;
+        Needs = normalized.Needs;
+        Money = normalized.Money;
+        Location = normalized.Location;
+    }
 }

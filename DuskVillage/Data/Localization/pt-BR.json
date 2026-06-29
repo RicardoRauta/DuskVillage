@@ -133,6 +133,8 @@
   "gameplay.world_time": "Dia {0} ({1} {2}, Ano {3}) - {4}",
   "gameplay.age": "Idade: {0}",
   "gameplay.origin": "Origem: {0}",
+  "gameplay.money": "Dinheiro: {0}",
+  "gameplay.location": "Localização: {0} ({1}, {2})",
   "gameplay.note": "A simulação do mundo será conectada a esta tela depois do módulo de menus.",
   "gameplay.advance_hour": "Avançar 1h",
   "gameplay.sleep": "Dormir",

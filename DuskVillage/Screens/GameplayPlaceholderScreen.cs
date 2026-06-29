@@ -49,7 +49,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         DrawBackdrop(draw);
         DrawScreenTitle(draw, "gameplay.title");
 
-        var panel = new Rectangle(CenterX(Context.ViewBounds, 760), 142, 760, 330);
+        var panel = new Rectangle(CenterX(Context.ViewBounds, 820), 124, 820, 410);
         draw.Fill(panel, draw.Theme.Panel);
         draw.Border(panel, draw.Theme.Border);
 
@@ -68,10 +68,12 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         DrawLine(draw, T("gameplay.world_time", _session.WorldTime.Day, T("season." + _session.WorldTime.CurrentSeason), _session.WorldTime.DayOfSeason, _session.WorldTime.Year, _session.WorldTime.CurrentTime), panel.X + 28, ref y, draw.Theme.Text);
         DrawLine(draw, T("gameplay.age", T("age." + _session.PlayerPreset.AgeCategoryId)), panel.X + 28, ref y, draw.Theme.Text);
         DrawLine(draw, T("gameplay.origin", T("origin." + _session.PlayerPreset.OriginId)), panel.X + 28, ref y, draw.Theme.Text);
+        DrawLine(draw, T("gameplay.money", _session.PlayerState.Money), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
+        DrawLine(draw, T("gameplay.location", _session.PlayerState.Location.AreaId, _session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
         DrawLine(draw, T("character.birthday", T("season." + _session.PlayerPreset.BirthdaySeasonId), _session.PlayerPreset.BirthdayDay), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
         DrawLine(draw, T("character.motivation", T(CharacterOptionCatalog.FindMotivation(_session.PlayerPreset.MotivationId).LabelKey)), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
         DrawLine(draw, T("character.attribute.points", _session.PlayerPreset.Attributes.Total, CharacterPresetValidator.AttributePointBudget), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
-        DrawLine(draw, T("character.review.needs", _session.PlayerPreset.Needs.Energy, _session.PlayerPreset.Needs.Hunger, _session.PlayerPreset.Needs.Health, _session.PlayerPreset.Needs.Mood), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
+        DrawLine(draw, T("character.review.needs", _session.PlayerState.Needs.Energy, _session.PlayerState.Needs.Hunger, _session.PlayerState.Needs.Health, _session.PlayerState.Needs.Mood), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
         DrawLine(draw, T("gameplay.note"), panel.X + 28, ref y, draw.Theme.MutedText, 0.8f);
 
         _menu.Draw(draw);
@@ -103,6 +105,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     {
         var saveGame = SaveGame.CreateNew(_session.PlayerPreset);
         saveGame.WorldState = SaveWorldState.FromWorldTime(_session.WorldTime);
+        saveGame.PlayerState = SavePlayerState.FromRuntimeState(_session.PlayerState);
         var slotNumber = _session.SlotNumber > 0 ? _session.SlotNumber : Context.SaveSlots.FindFirstWritableSlotNumber();
         Context.SaveSlots.SaveGame(slotNumber, saveGame);
 

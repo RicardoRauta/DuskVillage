@@ -133,6 +133,8 @@
   "gameplay.world_time": "Day {0} ({1} {2}, Year {3}) - {4}",
   "gameplay.age": "Age: {0}",
   "gameplay.origin": "Origin: {0}",
+  "gameplay.money": "Money: {0}",
+  "gameplay.location": "Location: {0} ({1}, {2})",
   "gameplay.note": "The world simulation will plug into this screen after the menu module.",
   "gameplay.advance_hour": "Advance 1h",
   "gameplay.sleep": "Sleep",

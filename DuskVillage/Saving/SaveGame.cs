@@ -1,6 +1,7 @@
 using System;
 using DuskVillage.Characters;
 using DuskVillage.Core;
+using DuskVillage.Players;
 using DuskVillage.World;
 
 namespace DuskVillage.Saving;
@@ -31,11 +32,7 @@ public sealed class SaveGame
                 CurrentTime = worldTime.CurrentTime
             },
             WorldState = SaveWorldState.FromWorldTime(worldTime),
-            PlayerState = new SavePlayerState
-            {
-                EntityId = "player_main",
-                CharacterPreset = playerPreset
-            }
+            PlayerState = SavePlayerState.CreateNew(playerPreset)
         };
     }
 
@@ -43,8 +40,8 @@ public sealed class SaveGame
     {
         Metadata ??= new SaveMetadata();
         WorldState ??= SaveWorldState.CreateDefault();
-        PlayerState ??= new SavePlayerState();
-        PlayerState.CharacterPreset ??= CharacterPresetFactory.CreateDefault();
+        PlayerState ??= SavePlayerState.CreateNew(CharacterPresetFactory.CreateDefault());
+        PlayerRuntimeFactory.Normalize(PlayerState);
         WorldState.Apply(WorldState);
         Metadata.LastPlayedAt = DateTimeOffset.UtcNow;
         Metadata.PlayerName = FullName(PlayerState.CharacterPreset);

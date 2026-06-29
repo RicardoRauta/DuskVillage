@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using DuskVillage.Characters;
+using DuskVillage.Players;
 using DuskVillage.World;
 
 namespace DuskVillage.Saving;
@@ -28,9 +29,10 @@ public static class SaveGameSerializer
         saveGame.Metadata ??= new SaveMetadata();
         saveGame.WorldState ??= SaveWorldState.CreateDefault();
         saveGame.WorldState.Apply(WorldClock.Normalize(saveGame.WorldState));
-        saveGame.PlayerState ??= new SavePlayerState();
+        saveGame.PlayerState ??= SavePlayerState.CreateNew(CharacterPresetFactory.CreateDefault());
         saveGame.PlayerState.CharacterPreset ??= CharacterPresetFactory.CreateDefault();
         CharacterPresetSerializer.Normalize(saveGame.PlayerState.CharacterPreset);
+        PlayerRuntimeFactory.Normalize(saveGame.PlayerState);
         saveGame.Metadata.PlayerName = string.IsNullOrWhiteSpace(saveGame.PlayerState.CharacterPreset.FamilyName)
             ? saveGame.PlayerState.CharacterPreset.Name
             : $"{saveGame.PlayerState.CharacterPreset.Name} {saveGame.PlayerState.CharacterPreset.FamilyName}";
