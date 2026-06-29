@@ -1,12 +1,16 @@
 using System;
+using DuskVillage.Actions;
 using DuskVillage.Animations;
 using DuskVillage.Characters;
 using DuskVillage.Core;
 using DuskVillage.Input;
 using DuskVillage.Needs;
+using DuskVillage.Players;
+using DuskVillage.Rendering;
 using DuskVillage.Saving;
 using DuskVillage.UI;
 using DuskVillage.World;
+using DuskVillage.WorldMap;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
@@ -17,13 +21,19 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     private readonly GameSessionSummary _session;
     private readonly VerticalMenu _menu = new();
     private readonly CharacterAnimationState _playerAnimation = new();
-    private double _savedMessageTimer;
-    private string _savedMessage = string.Empty;
+    private double _messageTimer;
+    private double _movementAnimationTimer;
+    private string _message = string.Empty;
 
     public GameplayPlaceholderScreen(GameScreenContext context, GameSessionSummary session)
         : base(context)
     {
         _session = session;
+        _session.WorldMap = WorldMapFactory.Normalize(_session.WorldMap);
+        NormalizePlayerLocation();
+
+        _menu.Add(new ButtonControl("action.plant_seeds", () => ExecuteMapAction("action_plant_seeds")));
+        _menu.Add(new ButtonControl("action.water", () => ExecuteMapAction("action_water")));
         _menu.Add(new ButtonControl("gameplay.advance_hour", AdvanceOneHour));
         _menu.Add(new ButtonControl("gameplay.sleep", SleepToNextDay));
         _menu.Add(new ButtonControl("gameplay.actions", OpenActionPreview));
@@ -42,12 +52,14 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         }
 
         LayoutMenu();
-        UpdatePlayerAnimation(gameTime);
+        var moved = HandleMovement();
+        HandleActionHotkeys();
+        UpdatePlayerAnimation(gameTime, moved);
         _menu.Update(Context);
 
-        if (_savedMessageTimer > 0)
+        if (_messageTimer > 0)
         {
-            _savedMessageTimer -= gameTime.ElapsedGameTime.TotalSeconds;
+            _messageTimer -= gameTime.ElapsedGameTime.TotalSeconds;
         }
     }
 
@@ -57,42 +69,93 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         DrawBackdrop(draw);
         DrawScreenTitle(draw, "gameplay.title");
 
-        var panel = new Rectangle(CenterX(Context.ViewBounds, 820), 124, 820, 410);
-        draw.Fill(panel, draw.Theme.Panel);
-        draw.Border(panel, draw.Theme.Border);
+        var layout = Layout();
+        draw.Fill(layout.MapPanel, draw.Theme.Panel);
+        draw.Border(layout.MapPanel, draw.Theme.Border);
+        draw.Fill(layout.InfoPanel, draw.Theme.Panel);
+        draw.Border(layout.InfoPanel, draw.Theme.Border);
 
-        var preview = new Rectangle(panel.Right - 230, panel.Y + 34, 176, 176);
-        draw.Fill(preview, draw.Theme.BackgroundTop);
-        draw.Border(preview, draw.Theme.Border);
-        Context.CharacterSpriteRenderer.Draw(draw, _session.PlayerPreset.Appearance, _playerAnimation, preview);
+        var target = TargetTile();
+        var viewport = Context.WorldMapRenderer.Draw(
+            draw,
+            _session.WorldMap,
+            _session.WorldTime.CurrentSeason,
+            new Rectangle(layout.MapPanel.X + 18, layout.MapPanel.Y + 18, layout.MapPanel.Width - 36, layout.MapPanel.Height - 36),
+            new Point(target.X, target.Y));
 
-        var y = panel.Y + 26;
-        var sourceText = _session.Source == "save_slot"
-            ? T("gameplay.from_save", _session.SlotId)
-            : T("gameplay.from_new_game");
-
-        DrawLine(draw, sourceText, panel.X + 28, ref y, draw.Theme.Accent);
-        DrawLine(draw, T("gameplay.player", FullName(_session.PlayerPreset)), panel.X + 28, ref y, draw.Theme.Text);
-        DrawLine(draw, T("gameplay.world_time", _session.WorldTime.Day, T("season." + _session.WorldTime.CurrentSeason), _session.WorldTime.DayOfSeason, _session.WorldTime.Year, _session.WorldTime.CurrentTime), panel.X + 28, ref y, draw.Theme.Text);
-        DrawLine(draw, T("gameplay.age", T("age." + _session.PlayerPreset.AgeCategoryId)), panel.X + 28, ref y, draw.Theme.Text);
-        DrawLine(draw, T("gameplay.origin", T("origin." + _session.PlayerPreset.OriginId)), panel.X + 28, ref y, draw.Theme.Text);
-        DrawLine(draw, T("gameplay.money", _session.PlayerState.Money), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
-        DrawLine(draw, T("gameplay.location", _session.PlayerState.Location.AreaId, _session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
-        DrawLine(draw, T("character.birthday", T("season." + _session.PlayerPreset.BirthdaySeasonId), _session.PlayerPreset.BirthdayDay), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
-        DrawLine(draw, T("character.motivation", T(CharacterOptionCatalog.FindMotivation(_session.PlayerPreset.MotivationId).LabelKey)), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
-        DrawLine(draw, T("character.attribute.points", _session.PlayerPreset.Attributes.Total, CharacterPresetValidator.AttributePointBudget), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
-        DrawLine(draw, T("character.review.needs", _session.PlayerState.Needs.Energy, _session.PlayerState.Needs.Hunger, _session.PlayerState.Needs.Health, _session.PlayerState.Needs.Mood), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
-        DrawLine(draw, T("gameplay.note"), panel.X + 28, ref y, draw.Theme.MutedText, 0.8f);
-
+        DrawPlayer(draw, viewport);
+        DrawInfoPanel(draw, layout.InfoPanel, target);
         _menu.Draw(draw);
 
-        if (_savedMessageTimer > 0)
+        if (_messageTimer > 0 && !string.IsNullOrWhiteSpace(_message))
         {
-            var size = Context.Font.MeasureString(_savedMessage) * UiScale * 0.86f;
-            draw.Text(_savedMessage, new Vector2((Context.ViewBounds.Width - size.X) / 2f, Context.ViewBounds.Bottom - 42), draw.Theme.Accent, 0.86f);
+            var size = Context.Font.MeasureString(_message) * UiScale * 0.82f;
+            draw.Text(_message, new Vector2(layout.MapPanel.X + (layout.MapPanel.Width - size.X) / 2f, layout.MapPanel.Bottom + 10), draw.Theme.Accent, 0.82f);
         }
 
         EndUi();
+    }
+
+    private bool HandleMovement()
+    {
+        var direction = ReadMovementDirection(Context.Input.Current);
+        if (!direction.HasValue)
+        {
+            return false;
+        }
+
+        CharacterAnimationSystem.SetMotion(_playerAnimation, CharacterAnimationIds.Idle, direction.Value);
+        var result = WorldMapTargetResolver.TryMove(_session.WorldMap, _session.PlayerState.Location, direction.Value);
+        if (!result.Moved)
+        {
+            ShowMessage(T(result.MessageKey));
+            return false;
+        }
+
+        _session.PlayerState.Location = result.Location;
+        _movementAnimationTimer = 0.18;
+        return true;
+    }
+
+    private void HandleActionHotkeys()
+    {
+        var input = Context.Input.Current;
+        if (input.WasKeyPressed(Context.Settings.Current.Input.Interact) || input.WasButtonPressed(Context.Settings.Current.Input.ControllerConfirm))
+        {
+            ExecuteMapAction("action_plant_seeds");
+        }
+
+        if (input.WasKeyPressed(Keys.R) || input.WasButtonPressed(Buttons.X))
+        {
+            ExecuteMapAction("action_water");
+        }
+    }
+
+    private void ExecuteMapAction(string actionId)
+    {
+        var target = TargetTile();
+        var request = new GameActionRequest
+        {
+            ActionId = actionId,
+            ActorEntityId = _session.PlayerState.EntityId,
+            FacingDirection = _playerAnimation.FacingDirection,
+            Target = GameActionTarget.Tile(_session.WorldMap.AreaId, target.X, target.Y)
+        };
+
+        var result = WorldMapActionSystem.Execute(
+            Context.Actions,
+            request,
+            _session.WorldTime,
+            _session.PlayerState,
+            _session.WorldMap);
+
+        _session.WorldTime = result.ActionResult.WorldTime;
+        _session.PlayerState = result.ActionResult.PlayerState;
+        _session.WorldMap = result.MapState;
+        CharacterAnimationSystem.SetMotion(_playerAnimation, result.ActionResult.AnimationId, result.ActionResult.FacingDirection);
+        _playerAnimation.ElapsedMilliseconds = 0;
+        _movementAnimationTimer = result.Succeeded ? 0.35 : 0;
+        ShowMessage(T(result.MessageKey));
     }
 
     private void AdvanceOneHour()
@@ -123,6 +186,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     {
         var saveGame = SaveGame.CreateNew(_session.PlayerPreset);
         saveGame.WorldState = SaveWorldState.FromWorldTime(_session.WorldTime);
+        saveGame.WorldState.Map = WorldMapFactory.Normalize(_session.WorldMap);
         saveGame.PlayerState = SavePlayerState.FromRuntimeState(_session.PlayerState);
         var slotNumber = _session.SlotNumber > 0 ? _session.SlotNumber : Context.SaveSlots.FindFirstWritableSlotNumber();
         Context.SaveSlots.SaveGame(slotNumber, saveGame);
@@ -148,33 +212,68 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         Context.Navigator.SetRoot(new MainMenuScreen(Context));
     }
 
+    private void DrawPlayer(UiDrawContext draw, WorldMapViewport viewport)
+    {
+        var location = _session.PlayerState.Location;
+        var tile = viewport.TileBounds(location.TileX, location.TileY);
+        var size = Math.Clamp(viewport.TileSize * 2, 60, 92);
+        var bounds = new Rectangle(tile.Center.X - size / 2, tile.Bottom - size + 6, size, size);
+        Context.CharacterSpriteRenderer.Draw(draw, _session.PlayerPreset.Appearance, _playerAnimation, bounds);
+    }
+
+    private void DrawInfoPanel(UiDrawContext draw, Rectangle panel, (int X, int Y) target)
+    {
+        var y = panel.Y + 18;
+        DrawLine(draw, FullName(_session.PlayerPreset), panel.X + 18, ref y, draw.Theme.Accent, 1.05f);
+        DrawLine(draw, T("gameplay.world_time", _session.WorldTime.Day, T("season." + _session.WorldTime.CurrentSeason), _session.WorldTime.DayOfSeason, _session.WorldTime.Year, _session.WorldTime.CurrentTime), panel.X + 18, ref y, draw.Theme.Text, 0.72f);
+        DrawLine(draw, T("gameplay.money", _session.PlayerState.Money), panel.X + 18, ref y, draw.Theme.Text, 0.78f);
+        DrawLine(draw, T("character.review.needs", _session.PlayerState.Needs.Energy, _session.PlayerState.Needs.Hunger, _session.PlayerState.Needs.Health, _session.PlayerState.Needs.Mood), panel.X + 18, ref y, draw.Theme.Text, 0.68f);
+        DrawLine(draw, T("gameplay.location", _session.PlayerState.Location.AreaId, _session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY), panel.X + 18, ref y, draw.Theme.Text, 0.72f);
+        DrawLine(draw, T("world.map.target", target.X, target.Y), panel.X + 18, ref y, draw.Theme.MutedText, 0.72f);
+
+        var tile = WorldMapRules.GetTile(_session.WorldMap, target.X, target.Y);
+        if (tile != null)
+        {
+            DrawLine(draw, T("world.map.tile_info", T("world.tile." + tile.TypeId), T("world.tile_state." + tile.StateId)), panel.X + 18, ref y, draw.Theme.MutedText, 0.68f);
+        }
+
+        DrawLine(draw, T("world.map.controls"), panel.X + 18, ref y, draw.Theme.MutedText, 0.66f);
+    }
+
     private void DrawLine(UiDrawContext draw, string text, int x, ref int y, Color color, float scale = 1f)
     {
         draw.Text(text, new Vector2(x, y), color, scale);
-        y += (int)(30 * UiScale * scale);
+        y += (int)(26 * UiScale * scale);
     }
 
     private void LayoutMenu()
     {
-        var controls = _menu.Controls;
-        var buttonCount = controls.Count;
-        var footerWidth = Math.Min(Context.ViewBounds.Width - 80, 1120);
-        var buttonGap = 12;
-        var buttonWidth = (footerWidth - buttonGap * (buttonCount - 1)) / buttonCount;
-        var startX = CenterX(Context.ViewBounds, footerWidth);
-        var buttonY = Context.ViewBounds.Bottom - 82;
+        var layout = Layout();
+        _menu.Arrange(layout.InfoPanel.X + 18, layout.InfoPanel.Y + 260, layout.InfoPanel.Width - 36, 38, 8);
+    }
 
-        for (var i = 0; i < buttonCount; i++)
-        {
-            controls[i].Bounds = new Rectangle(startX + i * (buttonWidth + buttonGap), buttonY, buttonWidth, 48);
-            controls[i].PointerClipBounds = null;
-        }
+    private ScreenLayout Layout()
+    {
+        var bounds = Context.ViewBounds;
+        var totalWidth = Math.Min(bounds.Width - 64, 1160);
+        var mapWidth = Math.Min(760, totalWidth - 360);
+        var panelHeight = Math.Min(540, bounds.Height - 154);
+        var x = CenterX(bounds, totalWidth);
+        var y = 112;
+        return new ScreenLayout(
+            new Rectangle(x, y, mapWidth, panelHeight),
+            new Rectangle(x + mapWidth + 18, y, totalWidth - mapWidth - 18, panelHeight));
+    }
+
+    private (int X, int Y) TargetTile()
+    {
+        return WorldMapTargetResolver.ResolveAdjacentTile(_session.PlayerState.Location, _playerAnimation.FacingDirection);
     }
 
     private void ShowMessage(string message)
     {
-        _savedMessage = message;
-        _savedMessageTimer = 2.5;
+        _message = message;
+        _messageTimer = 2.5;
     }
 
     private string NeedsMessage(bool forcedDayEnd, NeedsSimulationResult result)
@@ -202,6 +301,83 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         return T("gameplay.time_advanced");
     }
 
+    private void UpdatePlayerAnimation(GameTime gameTime, bool moved)
+    {
+        if (moved)
+        {
+            CharacterAnimationSystem.SetMotion(_playerAnimation, CharacterAnimationIds.Walk, _playerAnimation.FacingDirection);
+        }
+        else if (_movementAnimationTimer <= 0)
+        {
+            CharacterAnimationSystem.SetMotion(_playerAnimation, CharacterAnimationIds.Idle, _playerAnimation.FacingDirection);
+        }
+
+        if (_movementAnimationTimer > 0)
+        {
+            _movementAnimationTimer -= gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
+        CharacterAnimationSystem.Advance(_playerAnimation, gameTime.ElapsedGameTime);
+    }
+
+    private CharacterFacingDirection? ReadMovementDirection(InputSnapshot input)
+    {
+        var settings = Context.Settings.Current.Input;
+        if (input.WasKeyPressed(settings.MoveUp))
+        {
+            return CharacterFacingDirection.Up;
+        }
+
+        if (input.WasKeyPressed(settings.MoveDown))
+        {
+            return CharacterFacingDirection.Down;
+        }
+
+        if (input.WasKeyPressed(settings.MoveRight))
+        {
+            return CharacterFacingDirection.Right;
+        }
+
+        if (input.WasKeyPressed(settings.MoveLeft))
+        {
+            return CharacterFacingDirection.Left;
+        }
+
+        if (input.WasButtonPressed(Buttons.DPadUp))
+        {
+            return CharacterFacingDirection.Up;
+        }
+
+        if (input.WasButtonPressed(Buttons.DPadDown))
+        {
+            return CharacterFacingDirection.Down;
+        }
+
+        if (input.WasButtonPressed(Buttons.DPadRight))
+        {
+            return CharacterFacingDirection.Right;
+        }
+
+        if (input.WasButtonPressed(Buttons.DPadLeft))
+        {
+            return CharacterFacingDirection.Left;
+        }
+
+        return null;
+    }
+
+    private void NormalizePlayerLocation()
+    {
+        _session.PlayerState.Location ??= new PlayerLocationState();
+        _session.PlayerState.Location.AreaId = _session.WorldMap.AreaId;
+        if (!WorldMapRules.IsInside(_session.WorldMap, _session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY) ||
+            !WorldMapRules.IsPassable(WorldMapRules.GetTile(_session.WorldMap, _session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY)))
+        {
+            _session.PlayerState.Location.TileX = WorldMapFactory.DefaultPlayerTileX;
+            _session.PlayerState.Location.TileY = WorldMapFactory.DefaultPlayerTileY;
+        }
+    }
+
     private static string FullName(CharacterPreset preset)
     {
         return string.IsNullOrWhiteSpace(preset.FamilyName)
@@ -209,50 +385,5 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
             : $"{preset.Name} {preset.FamilyName}";
     }
 
-    private void UpdatePlayerAnimation(GameTime gameTime)
-    {
-        var movementDirection = ReadMovementDirection(Context.Input.Current);
-        var isMoving = movementDirection.HasValue;
-        var facingDirection = movementDirection ?? _playerAnimation.FacingDirection;
-        var animationId = isMoving ? CharacterAnimationIds.Walk : CharacterAnimationIds.Idle;
-
-        CharacterAnimationSystem.SetMotion(_playerAnimation, animationId, facingDirection);
-        CharacterAnimationSystem.Advance(_playerAnimation, gameTime.ElapsedGameTime);
-    }
-
-    private static CharacterFacingDirection? ReadMovementDirection(InputSnapshot input)
-    {
-        if (input.IsKeyDown(Keys.W))
-        {
-            return CharacterFacingDirection.Up;
-        }
-
-        if (input.IsKeyDown(Keys.S))
-        {
-            return CharacterFacingDirection.Down;
-        }
-
-        if (input.IsKeyDown(Keys.D))
-        {
-            return CharacterFacingDirection.Right;
-        }
-
-        if (input.IsKeyDown(Keys.A))
-        {
-            return CharacterFacingDirection.Left;
-        }
-
-        var thumbstick = input.GamePad.ThumbSticks.Left;
-        if (Math.Abs(thumbstick.X) > Math.Abs(thumbstick.Y) && Math.Abs(thumbstick.X) > 0.35f)
-        {
-            return thumbstick.X > 0 ? CharacterFacingDirection.Right : CharacterFacingDirection.Left;
-        }
-
-        if (Math.Abs(thumbstick.Y) > 0.35f)
-        {
-            return thumbstick.Y > 0 ? CharacterFacingDirection.Up : CharacterFacingDirection.Down;
-        }
-
-        return null;
-    }
+    private readonly record struct ScreenLayout(Rectangle MapPanel, Rectangle InfoPanel);
 }

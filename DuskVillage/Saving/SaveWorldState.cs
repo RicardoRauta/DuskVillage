@@ -1,9 +1,12 @@
 using DuskVillage.World;
+using DuskVillage.WorldMap;
 
 namespace DuskVillage.Saving;
 
 public sealed class SaveWorldState : WorldTime
 {
+    public WorldMapState Map { get; set; } = WorldMapFactory.CreateDefault();
+
     public static SaveWorldState CreateDefault()
     {
         return FromWorldTime(WorldClock.CreateDefault());
@@ -17,7 +20,8 @@ public sealed class SaveWorldState : WorldTime
             Day = normalized.Day,
             TimeMinutes = normalized.TimeMinutes,
             CurrentSeason = normalized.CurrentSeason,
-            Year = normalized.Year
+            Year = normalized.Year,
+            Map = WorldMapFactory.CreateDefault()
         };
     }
 
@@ -28,5 +32,6 @@ public sealed class SaveWorldState : WorldTime
         TimeMinutes = normalized.TimeMinutes;
         CurrentSeason = normalized.CurrentSeason;
         Year = normalized.Year;
+        Map = WorldMapFactory.Normalize(Map);
     }
 }

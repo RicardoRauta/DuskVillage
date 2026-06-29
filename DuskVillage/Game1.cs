@@ -33,6 +33,7 @@ namespace DuskVillage
         private ManaSeedCharacterTextureProvider _characterTextureProvider;
         private CharacterPortraitRenderer _characterPortraitRenderer;
         private CharacterSpriteRenderer _characterSpriteRenderer;
+        private WorldMapRenderer _worldMapRenderer;
         private GameScreenContext _screenContext;
 
         public Game1()
@@ -78,6 +79,7 @@ namespace DuskVillage
             _characterTextureProvider = new ManaSeedCharacterTextureProvider(GraphicsDevice, _characterAssetCatalog);
             _characterPortraitRenderer = new CharacterPortraitRenderer(_characterAssetCatalog, _characterTextureProvider);
             _characterSpriteRenderer = new CharacterSpriteRenderer(_characterAssetCatalog, _characterTextureProvider);
+            _worldMapRenderer = new WorldMapRenderer(_worldAssetCatalog, _seasonalWorldTextureProvider);
 
             _screenContext = new GameScreenContext(
                 _graphics,
@@ -96,6 +98,7 @@ namespace DuskVillage
                 _characterAssetCatalog,
                 _characterPortraitRenderer,
                 _characterSpriteRenderer,
+                _worldMapRenderer,
                 _screenManager,
                 Exit,
                 ApplySettings);

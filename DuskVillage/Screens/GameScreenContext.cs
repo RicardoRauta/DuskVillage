@@ -31,6 +31,7 @@ public sealed class GameScreenContext
         ManaSeedCharacterAssetCatalog characterAssets,
         CharacterPortraitRenderer characterPortraitRenderer,
         CharacterSpriteRenderer characterSpriteRenderer,
+        WorldMapRenderer worldMapRenderer,
         IScreenNavigator navigator,
         Action exitGame,
         Action<GameSettings> applySettings)
@@ -51,6 +52,7 @@ public sealed class GameScreenContext
         CharacterAssets = characterAssets;
         CharacterPortraitRenderer = characterPortraitRenderer;
         CharacterSpriteRenderer = characterSpriteRenderer;
+        WorldMapRenderer = worldMapRenderer;
         Navigator = navigator;
         ExitGame = exitGame;
         ApplySettings = applySettings;
@@ -87,6 +89,8 @@ public sealed class GameScreenContext
     public CharacterPortraitRenderer CharacterPortraitRenderer { get; }
 
     public CharacterSpriteRenderer CharacterSpriteRenderer { get; }
+
+    public WorldMapRenderer WorldMapRenderer { get; }
 
     public IScreenNavigator Navigator { get; }
 

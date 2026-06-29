@@ -6,5 +6,9 @@ public sealed class GameActionEffectDefinition
 
     public string NeedId { get; set; } = string.Empty;
 
+    public string TileStateId { get; set; } = string.Empty;
+
+    public string CropId { get; set; } = string.Empty;
+
     public int Amount { get; set; }
 }

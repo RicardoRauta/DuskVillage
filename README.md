@@ -90,6 +90,7 @@ The game code can still run without these zips. Missing seasonal world assets us
 - [Character Animation](docs/CHARACTER_ANIMATION.md)
 - [Actions](docs/ACTIONS.md)
 - [World Assets](docs/WORLD_ASSETS.md)
+- [World Map](docs/WORLD_MAP.md)
 - [Runtime State](docs/RUNTIME_STATE.md)
 - [Needs Simulation](docs/NEEDS_SIMULATION.md)
 

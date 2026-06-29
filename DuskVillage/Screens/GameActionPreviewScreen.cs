@@ -249,6 +249,21 @@ public sealed class GameActionPreviewScreen : GameScreenBase
             return $"{T("gameplay.money", sign + effect.Amount)}";
         }
 
+        if (effect.Type.Equals(GameActionEffectTypes.PlantCrop, StringComparison.OrdinalIgnoreCase))
+        {
+            return T("action.effect.plantCrop");
+        }
+
+        if (effect.Type.Equals(GameActionEffectTypes.WaterTile, StringComparison.OrdinalIgnoreCase))
+        {
+            return T("action.effect.waterTile");
+        }
+
+        if (effect.Type.Equals(GameActionEffectTypes.SetTileState, StringComparison.OrdinalIgnoreCase))
+        {
+            return T("action.effect.setTileState");
+        }
+
         return T("action.effect." + effect.Type);
     }
 

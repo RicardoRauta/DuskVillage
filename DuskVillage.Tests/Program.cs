@@ -7,6 +7,7 @@ using DuskVillage.Players;
 using DuskVillage.Saving;
 using DuskVillage.World;
 using DuskVillage.WorldAssets;
+using DuskVillage.WorldMap;
 using System.IO.Compression;
 
 var tests = new (string Name, Action Run)[]
@@ -25,6 +26,11 @@ var tests = new (string Name, Action Run)[]
     ("World calendar rolls season and year", WorldCalendarRollsSeasonAndYear),
     ("Seasonal world asset catalog loads stable IDs", SeasonalWorldAssetCatalogLoadsStableIds),
     ("Seasonal world asset catalog supports missing zips", SeasonalWorldAssetCatalogSupportsMissingZips),
+    ("World map default has farm plot", WorldMapDefaultHasFarmPlot),
+    ("World map movement respects passability", WorldMapMovementRespectsPassability),
+    ("World map target resolver uses facing", WorldMapTargetResolverUsesFacing),
+    ("World map actions change tile state", WorldMapActionsChangeTileState),
+    ("World map action rejects invalid tile", WorldMapActionRejectsInvalidTile),
     ("Player runtime starts from preset needs", PlayerRuntimeStartsFromPresetNeeds),
     ("Old save player runtime normalizes", OldSavePlayerRuntimeNormalizes),
     ("Needs elapsed time changes runtime needs", NeedsElapsedTimeChangesRuntimeNeeds),
@@ -316,6 +322,128 @@ static void SeasonalWorldAssetCatalogSupportsMissingZips()
     }
 }
 
+static void WorldMapDefaultHasFarmPlot()
+{
+    var map = WorldMapFactory.CreateDefault();
+
+    AssertEqual(WorldMapFactory.DefaultWidth, map.Width, "Default map width should be stable.");
+    AssertEqual(WorldMapFactory.DefaultHeight, map.Height, "Default map height should be stable.");
+    AssertEqual(WorldMapTileTypeIds.Water, WorldMapRules.GetTile(map, 0, 0).TypeId, "Default map should block the border with water.");
+    AssertEqual(WorldMapTileTypeIds.Soil, WorldMapRules.GetTile(map, 4, 3).TypeId, "Default map should include a farmable soil plot.");
+    AssertEqual(WorldMapTileTypeIds.Path, WorldMapRules.GetTile(map, 2, 6).TypeId, "Default map should include a path.");
+}
+
+static void WorldMapMovementRespectsPassability()
+{
+    var map = WorldMapFactory.CreateDefault();
+    var location = new PlayerLocationState
+    {
+        AreaId = map.AreaId,
+        TileX = 1,
+        TileY = 1
+    };
+
+    var blocked = WorldMapTargetResolver.TryMove(map, location, CharacterFacingDirection.Left);
+    var moved = WorldMapTargetResolver.TryMove(map, location, CharacterFacingDirection.Right);
+
+    Assert(!blocked.Moved, "Movement into water border should be blocked.");
+    AssertEqual(1, blocked.Location.TileX, "Blocked movement should keep X.");
+    Assert(moved.Moved, "Movement into passable tile should succeed.");
+    AssertEqual(2, moved.Location.TileX, "Movement should update X.");
+}
+
+static void WorldMapTargetResolverUsesFacing()
+{
+    var location = new PlayerLocationState
+    {
+        AreaId = WorldMapFactory.DefaultAreaId,
+        TileX = 7,
+        TileY = 7
+    };
+
+    var up = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Up);
+    var right = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Right);
+
+    AssertEqual((7, 6), up, "Up should target the tile above.");
+    AssertEqual((8, 7), right, "Right should target the tile to the right.");
+}
+
+static void WorldMapActionsChangeTileState()
+{
+    var registry = CreateTestActionRegistry();
+    var map = WorldMapFactory.CreateDefault();
+    var player = PlayerRuntimeFactory.CreateNew(CharacterPresetFactory.CreateDefault());
+    player.Location.AreaId = map.AreaId;
+    player.Location.TileX = 4;
+    player.Location.TileY = 6;
+    player.Needs.Energy = 80;
+    player.Needs.Hunger = 70;
+
+    var plant = WorldMapActionSystem.Execute(
+        registry,
+        new GameActionRequest
+        {
+            ActionId = "test_plant",
+            ActorEntityId = player.EntityId,
+            FacingDirection = CharacterFacingDirection.Up,
+            Target = GameActionTarget.Tile(map.AreaId, 4, 5)
+        },
+        WorldClock.CreateDefault(),
+        player,
+        map);
+
+    Assert(plant.Succeeded, "Planting on empty soil should succeed.");
+    AssertEqual(WorldMapTileStateIds.Planted, WorldMapRules.GetTile(plant.MapState, 4, 5).StateId, "Planting should update tile state.");
+    AssertEqual(WorldMapCropIds.StarterSeeds, WorldMapRules.GetTile(plant.MapState, 4, 5).CropId, "Planting should set crop id.");
+    AssertEqual(WorldMapTileStateIds.Empty, WorldMapRules.GetTile(map, 4, 5).StateId, "Planting should not mutate original map.");
+    AssertEqual("06:10", plant.ActionResult.WorldTime.CurrentTime, "Planting should use action time cost.");
+    AssertEqual(77, plant.ActionResult.PlayerState.Needs.Energy, "Planting should apply energy cost.");
+
+    var water = WorldMapActionSystem.Execute(
+        registry,
+        new GameActionRequest
+        {
+            ActionId = "test_water",
+            ActorEntityId = plant.ActionResult.PlayerState.EntityId,
+            FacingDirection = CharacterFacingDirection.Up,
+            Target = GameActionTarget.Tile(plant.MapState.AreaId, 4, 5)
+        },
+        plant.ActionResult.WorldTime,
+        plant.ActionResult.PlayerState,
+        plant.MapState);
+
+    Assert(water.Succeeded, "Watering a planted crop should succeed.");
+    AssertEqual(WorldMapTileStateIds.Watered, WorldMapRules.GetTile(water.MapState, 4, 5).StateId, "Watering should update tile state.");
+    AssertEqual("06:20", water.ActionResult.WorldTime.CurrentTime, "Watering should use action time cost.");
+    AssertEqual(73, water.ActionResult.PlayerState.Needs.Energy, "Watering should apply energy cost.");
+}
+
+static void WorldMapActionRejectsInvalidTile()
+{
+    var registry = CreateTestActionRegistry();
+    var map = WorldMapFactory.CreateDefault();
+    var player = PlayerRuntimeFactory.CreateNew(CharacterPresetFactory.CreateDefault());
+    player.Needs.Energy = 80;
+
+    var result = WorldMapActionSystem.Execute(
+        registry,
+        new GameActionRequest
+        {
+            ActionId = "test_plant",
+            ActorEntityId = player.EntityId,
+            FacingDirection = CharacterFacingDirection.Right,
+            Target = GameActionTarget.Tile(map.AreaId, 3, 3)
+        },
+        WorldClock.CreateDefault(),
+        player,
+        map);
+
+    Assert(!result.Succeeded, "Planting on grass should fail.");
+    AssertEqual("world.map.not_plantable", result.MessageKey, "Invalid plant target should explain the failure.");
+    AssertEqual("06:00", result.ActionResult.WorldTime.CurrentTime, "Invalid target should not spend time.");
+    AssertEqual(80, result.ActionResult.PlayerState.Needs.Energy, "Invalid target should not spend energy.");
+}
+
 static void OldSaveWorldTimeNormalizes()
 {
     const string json = """
@@ -338,6 +466,8 @@ static void OldSaveWorldTimeNormalizes()
     AssertEqual("08:00", loaded.WorldState.CurrentTime, "Legacy save time should load.");
     AssertEqual(WorldCalendarRules.Summer, loaded.WorldState.CurrentSeason, "Legacy save season should be derived.");
     AssertEqual(1, loaded.WorldState.Year, "Legacy save year should be derived.");
+    AssertEqual(WorldMapFactory.DefaultWidth, loaded.WorldState.Map.Width, "Legacy save should receive default map width.");
+    AssertEqual(WorldMapFactory.DefaultAreaId, loaded.WorldState.Map.AreaId, "Legacy save should receive default map area.");
 }
 
 static void PlayerRuntimeStartsFromPresetNeeds()
@@ -704,6 +834,49 @@ static GameActionRegistry CreateTestActionRegistry()
         },
         new GameActionDefinition
         {
+            Id = "test_plant",
+            LabelKey = "action.plant_seeds",
+            TargetKind = GameActionTargetKinds.Tile,
+            AnimationId = CharacterAnimationIds.PlantSeeds,
+            TimeCostMinutes = 10,
+            Effects =
+            [
+                new GameActionEffectDefinition
+                {
+                    Type = GameActionEffectTypes.PlantCrop,
+                    CropId = WorldMapCropIds.StarterSeeds
+                },
+                new GameActionEffectDefinition
+                {
+                    Type = GameActionEffectTypes.ChangeNeed,
+                    NeedId = GameActionNeedIds.Energy,
+                    Amount = -3
+                }
+            ]
+        },
+        new GameActionDefinition
+        {
+            Id = "test_water",
+            LabelKey = "action.water",
+            TargetKind = GameActionTargetKinds.Tile,
+            AnimationId = CharacterAnimationIds.Water,
+            TimeCostMinutes = 10,
+            Effects =
+            [
+                new GameActionEffectDefinition
+                {
+                    Type = GameActionEffectTypes.WaterTile
+                },
+                new GameActionEffectDefinition
+                {
+                    Type = GameActionEffectTypes.ChangeNeed,
+                    NeedId = GameActionNeedIds.Energy,
+                    Amount = -4
+                }
+            ]
+        },
+        new GameActionDefinition
+        {
             Id = "test_sleep",
             LabelKey = "action.sleep",
             TargetKind = GameActionTargetKinds.Self,
@@ -738,6 +911,10 @@ static void SaveGameRoundTripsCharacterPreset()
     saveGame.PlayerState.Location.AreaId = "starter_farm";
     saveGame.PlayerState.Location.TileX = 7;
     saveGame.PlayerState.Location.TileY = 9;
+    saveGame.WorldState.Map = WorldMapFactory.CreateDefault();
+    var savedTile = WorldMapRules.GetTile(saveGame.WorldState.Map, 4, 5);
+    savedTile.StateId = WorldMapTileStateIds.Watered;
+    savedTile.CropId = WorldMapCropIds.StarterSeeds;
 
     var json = SaveGameSerializer.Serialize(saveGame);
     var loaded = SaveGameSerializer.Deserialize(json);
@@ -755,6 +932,8 @@ static void SaveGameRoundTripsCharacterPreset()
     AssertEqual("starter_farm", loaded.PlayerState.Location.AreaId, "Save should keep runtime area.");
     AssertEqual(7, loaded.PlayerState.Location.TileX, "Save should keep runtime tile X.");
     AssertEqual(9, loaded.PlayerState.Location.TileY, "Save should keep runtime tile Y.");
+    AssertEqual(WorldMapTileStateIds.Watered, WorldMapRules.GetTile(loaded.WorldState.Map, 4, 5).StateId, "Save should keep map tile state.");
+    AssertEqual(WorldMapCropIds.StarterSeeds, WorldMapRules.GetTile(loaded.WorldState.Map, 4, 5).CropId, "Save should keep map crop id.");
 }
 
 static void Assert(bool condition, string message)

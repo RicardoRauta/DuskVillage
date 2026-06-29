@@ -63,9 +63,14 @@ Current safe effect types:
 changeNeed
 addMoney
 sleepToNextDay
+plantCrop
+waterTile
+setTileState
 ```
 
 Actions advance the clock through `timeCostMinutes`. Need costs are explicit effects, so a short 10-minute action does not accidentally consume a full hour of hunger or energy.
+
+The base action executor applies actor/time effects. World tile effects are applied by `WorldMapActionSystem`, which composes action definitions with map validation and keeps the map module independent.
 
 ## Mod Compatibility
 
