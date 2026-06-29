@@ -34,12 +34,12 @@ The purple number in the guide is the cell index. The yellow number is the sugge
 Example down-walk sequence:
 
 ```text
-048 105
-049 105
-050 105
-048 105 flipX
-049 105 flipX
-050 105 flipX
+048 135
+049 135
+050 135
+048 135 flipX
+049 135 flipX
+050 135 flipX
 ```
 
 ## MVP Clips
@@ -47,13 +47,21 @@ Example down-walk sequence:
 Implemented clips:
 
 ```text
-idle: down, up, right, left
-walk: down, up, right, left
+idle, walk, run, jump
+walk carrying, run carrying, jump carrying
+push, pull, pick up/carry, throw carried
+plant seeds, water, work station
+wave, hug, sing, lute/guitar, flute/ocarina, drums
+sit throne, look around, sit on ledge, sit chair, meditate
+sleep, sleep/sit, thumbs up, mad stomp, shocked, laugh
+drink standing, sit on floor, impatient
 ```
 
 The gameplay placeholder uses this only as an animation preview. Pressing movement input changes the player preview between idle and walk, but map movement, collision, camera, and tile interaction belong to later modules.
 
 The gameplay placeholder also exposes an animation preview screen. It is a temporary testing surface for this module and lets the developer choose clip, direction, playback, reset, and inspect the current cell, frame duration, `flipX`, and timeline position.
+
+Some guide rows reference prop, tool, water, weapon, or 32x32 effect sprites. This module stores the body animation frames first. Drawing external props/effects will be handled by a later equipment/effects renderer module.
 
 ## Rendering
 

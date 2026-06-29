@@ -17,7 +17,39 @@ public sealed class CharacterAnimationPreviewScreen : GameScreenBase
     private static readonly IReadOnlyList<SelectorOption> AnimationOptions =
     [
         new(CharacterAnimationIds.Walk, "animation.walk"),
-        new(CharacterAnimationIds.Idle, "animation.idle")
+        new(CharacterAnimationIds.Run, "animation.run"),
+        new(CharacterAnimationIds.Idle, "animation.idle"),
+        new(CharacterAnimationIds.Jump, "animation.jump"),
+        new(CharacterAnimationIds.WalkCarry, "animation.walk_carry"),
+        new(CharacterAnimationIds.RunCarry, "animation.run_carry"),
+        new(CharacterAnimationIds.JumpCarry, "animation.jump_carry"),
+        new(CharacterAnimationIds.Push, "animation.push"),
+        new(CharacterAnimationIds.Pull, "animation.pull"),
+        new(CharacterAnimationIds.PickUpCarry, "animation.pick_up_carry"),
+        new(CharacterAnimationIds.ThrowCarry, "animation.throw_carry"),
+        new(CharacterAnimationIds.PlantSeeds, "animation.plant_seeds"),
+        new(CharacterAnimationIds.Water, "animation.water"),
+        new(CharacterAnimationIds.WorkStation, "animation.work_station"),
+        new(CharacterAnimationIds.Wave, "animation.wave"),
+        new(CharacterAnimationIds.Hug, "animation.hug"),
+        new(CharacterAnimationIds.Sing, "animation.sing"),
+        new(CharacterAnimationIds.LuteGuitar, "animation.lute_guitar"),
+        new(CharacterAnimationIds.FluteOcarina, "animation.flute_ocarina"),
+        new(CharacterAnimationIds.Drums, "animation.drums"),
+        new(CharacterAnimationIds.SitThrone, "animation.sit_throne"),
+        new(CharacterAnimationIds.LookAround, "animation.look_around"),
+        new(CharacterAnimationIds.SitLedge, "animation.sit_ledge"),
+        new(CharacterAnimationIds.SitChair, "animation.sit_chair"),
+        new(CharacterAnimationIds.Meditate, "animation.meditate"),
+        new(CharacterAnimationIds.Sleep, "animation.sleep"),
+        new(CharacterAnimationIds.SleepSit, "animation.sleep_sit"),
+        new(CharacterAnimationIds.ThumbsUp, "animation.thumbs_up"),
+        new(CharacterAnimationIds.MadStomp, "animation.mad_stomp"),
+        new(CharacterAnimationIds.Shocked, "animation.shocked"),
+        new(CharacterAnimationIds.Laugh, "animation.laugh"),
+        new(CharacterAnimationIds.DrinkStanding, "animation.drink_standing"),
+        new(CharacterAnimationIds.SitFloor, "animation.sit_floor"),
+        new(CharacterAnimationIds.Impatient, "animation.impatient")
     ];
 
     private static readonly IReadOnlyList<SelectorOption> DirectionOptions =

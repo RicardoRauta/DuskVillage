@@ -26,6 +26,8 @@ var tests = new (string Name, Action Run)[]
     ("Needs low hunger affects mood and health", NeedsLowHungerAffectsMoodAndHealth),
     ("Needs sleep restores energy", NeedsSleepRestoresEnergy),
     ("Character walk guide uses flip and durations", CharacterWalkGuideUsesFlipAndDurations),
+    ("Character run guide stays separate from walk", CharacterRunGuideStaysSeparateFromWalk),
+    ("Expanded character clips are four way", ExpandedCharacterClipsAreFourWay),
     ("Character animation timeline honors variable durations", CharacterAnimationTimelineHonorsVariableDurations),
     ("Character animation cell coordinates are stable", CharacterAnimationCellCoordinatesAreStable),
     ("Old save world time normalizes", OldSaveWorldTimeNormalizes),
@@ -367,20 +369,83 @@ static void CharacterWalkGuideUsesFlipAndDurations()
 
     AssertEqual(6, clip.Frames.Count, "Down walk should use the six guide frames.");
     AssertEqual(48, clip.Frames[0].CellIndex, "First down walk frame should use cell 048.");
-    AssertEqual(105, clip.Frames[0].DurationMilliseconds, "First down walk frame should use guide duration 105.");
+    AssertEqual(135, clip.Frames[0].DurationMilliseconds, "First down walk frame should use guide duration 135.");
     AssertEqual(49, clip.Frames[1].CellIndex, "Second down walk frame should use cell 049.");
-    AssertEqual(105, clip.Frames[1].DurationMilliseconds, "Second down walk frame should use guide duration 105.");
+    AssertEqual(135, clip.Frames[1].DurationMilliseconds, "Second down walk frame should use guide duration 135.");
     AssertEqual(50, clip.Frames[2].CellIndex, "Third down walk frame should use cell 050.");
-    AssertEqual(105, clip.Frames[2].DurationMilliseconds, "Third down walk frame should use guide duration 105.");
+    AssertEqual(135, clip.Frames[2].DurationMilliseconds, "Third down walk frame should use guide duration 135.");
     Assert(clip.Frames[3].FlipX, "Guide reverse marker should become flipX on repeated down walk frames.");
 
     AssertEqual(64, sideClip.Frames[0].CellIndex, "First side walk frame should use cell 064.");
-    AssertEqual(145, sideClip.Frames[0].DurationMilliseconds, "First side walk frame should use guide duration 145.");
+    AssertEqual(135, sideClip.Frames[0].DurationMilliseconds, "First side walk frame should use guide duration 135.");
     AssertEqual(66, sideClip.Frames[2].CellIndex, "Third side walk frame should use cell 066.");
-    AssertEqual(105, sideClip.Frames[2].DurationMilliseconds, "Third side walk frame should use guide duration 105.");
+    AssertEqual(135, sideClip.Frames[2].DurationMilliseconds, "Third side walk frame should use guide duration 135.");
     AssertEqual(69, sideClip.Frames[5].CellIndex, "Last side walk frame should use cell 069.");
-    AssertEqual(105, sideClip.Frames[5].DurationMilliseconds, "Last side walk frame should use guide duration 105.");
+    AssertEqual(135, sideClip.Frames[5].DurationMilliseconds, "Last side walk frame should use guide duration 135.");
     Assert(leftClip.Frames.All(frame => frame.FlipX), "Left walk should reuse right-facing cells with flipX.");
+}
+
+static void CharacterRunGuideStaysSeparateFromWalk()
+{
+    var downRun = CharacterAnimationCatalog.GetClip(CharacterAnimationIds.Run, CharacterFacingDirection.Down);
+    var upRun = CharacterAnimationCatalog.GetClip(CharacterAnimationIds.Run, CharacterFacingDirection.Up);
+    var sideRun = CharacterAnimationCatalog.GetClip(CharacterAnimationIds.Run, CharacterFacingDirection.Right);
+
+    AssertEqual(51, downRun.Frames[2].CellIndex, "Down run should use cell 051, unlike walk.");
+    AssertEqual(115, downRun.Frames[2].DurationMilliseconds, "Down run should keep guide duration 115.");
+    AssertEqual(55, upRun.Frames[2].CellIndex, "Up run should use cell 055.");
+    AssertEqual(70, sideRun.Frames[2].CellIndex, "Side run should use cell 070.");
+    AssertEqual(71, sideRun.Frames[5].CellIndex, "Side run should use cell 071.");
+}
+
+static void ExpandedCharacterClipsAreFourWay()
+{
+    var animationIds = new[]
+    {
+        CharacterAnimationIds.Idle,
+        CharacterAnimationIds.Walk,
+        CharacterAnimationIds.Run,
+        CharacterAnimationIds.Jump,
+        CharacterAnimationIds.WalkCarry,
+        CharacterAnimationIds.RunCarry,
+        CharacterAnimationIds.JumpCarry,
+        CharacterAnimationIds.Push,
+        CharacterAnimationIds.Pull,
+        CharacterAnimationIds.PickUpCarry,
+        CharacterAnimationIds.ThrowCarry,
+        CharacterAnimationIds.PlantSeeds,
+        CharacterAnimationIds.Water,
+        CharacterAnimationIds.WorkStation,
+        CharacterAnimationIds.Wave,
+        CharacterAnimationIds.Hug,
+        CharacterAnimationIds.Sing,
+        CharacterAnimationIds.LuteGuitar,
+        CharacterAnimationIds.FluteOcarina,
+        CharacterAnimationIds.Drums,
+        CharacterAnimationIds.SitThrone,
+        CharacterAnimationIds.LookAround,
+        CharacterAnimationIds.SitLedge,
+        CharacterAnimationIds.SitChair,
+        CharacterAnimationIds.Meditate,
+        CharacterAnimationIds.Sleep,
+        CharacterAnimationIds.SleepSit,
+        CharacterAnimationIds.ThumbsUp,
+        CharacterAnimationIds.MadStomp,
+        CharacterAnimationIds.Shocked,
+        CharacterAnimationIds.Laugh,
+        CharacterAnimationIds.DrinkStanding,
+        CharacterAnimationIds.SitFloor,
+        CharacterAnimationIds.Impatient
+    };
+
+    foreach (var animationId in animationIds)
+    {
+        foreach (var direction in Enum.GetValues<CharacterFacingDirection>())
+        {
+            var clip = CharacterAnimationCatalog.GetClip(animationId, direction);
+            Assert(clip.Frames.Count > 0, $"{animationId}/{direction} should have frames.");
+        }
+    }
 }
 
 static void CharacterAnimationTimelineHonorsVariableDurations()
@@ -390,14 +455,14 @@ static void CharacterAnimationTimelineHonorsVariableDurations()
 
     AssertEqual(48, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Walk should start on first frame.");
 
-    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(104));
-    AssertEqual(48, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 048 should last through 104ms.");
+    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(134));
+    AssertEqual(48, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 048 should last through 134ms.");
 
     CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(1));
-    AssertEqual(49, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 049 should start at 105ms.");
+    AssertEqual(49, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 049 should start at 135ms.");
 
-    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(105));
-    AssertEqual(50, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 050 should start after the second 105ms frame.");
+    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(135));
+    AssertEqual(50, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 050 should start after the second 135ms frame.");
 }
 
 static void CharacterAnimationCellCoordinatesAreStable()
