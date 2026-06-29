@@ -1,4 +1,5 @@
 using System;
+using DuskVillage.Actions;
 using DuskVillage.CharacterAssets;
 using DuskVillage.Input;
 using DuskVillage.Localization;
@@ -23,6 +24,7 @@ public sealed class GameScreenContext
         IGameSettingsService settings,
         ISaveSlotProvider saveSlots,
         ICharacterPresetStorage characterPresetStorage,
+        GameActionRegistry actions,
         ManaSeedCharacterAssetCatalog characterAssets,
         CharacterPortraitRenderer characterPortraitRenderer,
         CharacterSpriteRenderer characterSpriteRenderer,
@@ -40,6 +42,7 @@ public sealed class GameScreenContext
         Settings = settings;
         SaveSlots = saveSlots;
         CharacterPresetStorage = characterPresetStorage;
+        Actions = actions;
         CharacterAssets = characterAssets;
         CharacterPortraitRenderer = characterPortraitRenderer;
         CharacterSpriteRenderer = characterSpriteRenderer;
@@ -67,6 +70,8 @@ public sealed class GameScreenContext
     public ISaveSlotProvider SaveSlots { get; }
 
     public ICharacterPresetStorage CharacterPresetStorage { get; }
+
+    public GameActionRegistry Actions { get; }
 
     public ManaSeedCharacterAssetCatalog CharacterAssets { get; }
 

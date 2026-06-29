@@ -1,3 +1,4 @@
+using DuskVillage.Actions;
 using DuskVillage.CharacterAssets;
 using DuskVillage.Core;
 using DuskVillage.Input;
@@ -24,6 +25,7 @@ namespace DuskVillage
         private LocalizationService _localization;
         private FileSaveSlotProvider _saveSlots;
         private FileCharacterPresetStorage _characterPresetStorage;
+        private GameActionRegistry _actionRegistry;
         private ManaSeedCharacterAssetCatalog _characterAssetCatalog;
         private ManaSeedCharacterTextureProvider _characterTextureProvider;
         private CharacterPortraitRenderer _characterPortraitRenderer;
@@ -66,6 +68,7 @@ namespace DuskVillage
             _localization = new LocalizationService(GameDirectories.LocalizationDirectory, _settings.Current.General.LanguageCode);
             _saveSlots = new FileSaveSlotProvider(GameDirectories.SavesDirectory);
             _characterPresetStorage = new FileCharacterPresetStorage(GameDirectories.CharacterPresetsDirectory);
+            _actionRegistry = GameActionRegistry.LoadFromDirectories(GameDirectories.ActionDefinitionsDirectory);
             _characterAssetCatalog = ManaSeedCharacterAssetCatalog.Load(GameDirectories.ManaSeedFarmerSpriteZipPath);
             _characterTextureProvider = new ManaSeedCharacterTextureProvider(GraphicsDevice, _characterAssetCatalog);
             _characterPortraitRenderer = new CharacterPortraitRenderer(_characterAssetCatalog, _characterTextureProvider);
@@ -82,6 +85,7 @@ namespace DuskVillage
                 _settings,
                 _saveSlots,
                 _characterPresetStorage,
+                _actionRegistry,
                 _characterAssetCatalog,
                 _characterPortraitRenderer,
                 _characterSpriteRenderer,

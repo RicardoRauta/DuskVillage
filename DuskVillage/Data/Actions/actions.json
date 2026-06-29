@@ -1,0 +1,110 @@
+[
+  {
+    "id": "action_walk",
+    "labelKey": "action.walk",
+    "descriptionKey": "action.walk.description",
+    "targetKind": "none",
+    "animationId": "walk",
+    "successMessageKey": "action.result.walked",
+    "tags": [ "movement" ]
+  },
+  {
+    "id": "action_run",
+    "labelKey": "action.run",
+    "descriptionKey": "action.run.description",
+    "targetKind": "none",
+    "animationId": "run",
+    "successMessageKey": "action.result.ran",
+    "tags": [ "movement" ],
+    "effects": [
+      { "type": "changeNeed", "needId": "energy", "amount": -2 }
+    ]
+  },
+  {
+    "id": "action_wave",
+    "labelKey": "action.wave",
+    "descriptionKey": "action.wave.description",
+    "targetKind": "self",
+    "animationId": "wave",
+    "successMessageKey": "action.result.waved",
+    "tags": [ "social", "gesture" ]
+  },
+  {
+    "id": "action_plant_seeds",
+    "labelKey": "action.plant_seeds",
+    "descriptionKey": "action.plant_seeds.description",
+    "targetKind": "tile",
+    "animationId": "plant_seeds",
+    "timeCostMinutes": 10,
+    "successMessageKey": "action.result.planted_seeds",
+    "tags": [ "farming", "tile" ],
+    "effects": [
+      { "type": "changeNeed", "needId": "energy", "amount": -3 },
+      { "type": "changeNeed", "needId": "hunger", "amount": -1 }
+    ]
+  },
+  {
+    "id": "action_water",
+    "labelKey": "action.water",
+    "descriptionKey": "action.water.description",
+    "targetKind": "tile",
+    "animationId": "water",
+    "timeCostMinutes": 10,
+    "successMessageKey": "action.result.watered",
+    "tags": [ "farming", "tile" ],
+    "effects": [
+      { "type": "changeNeed", "needId": "energy", "amount": -4 },
+      { "type": "changeNeed", "needId": "hunger", "amount": -1 }
+    ]
+  },
+  {
+    "id": "action_work_station",
+    "labelKey": "action.work_station",
+    "descriptionKey": "action.work_station.description",
+    "targetKind": "self",
+    "animationId": "work_station",
+    "timeCostMinutes": 30,
+    "successMessageKey": "action.result.worked",
+    "tags": [ "work", "crafting" ],
+    "effects": [
+      { "type": "changeNeed", "needId": "energy", "amount": -8 },
+      { "type": "addMoney", "amount": 5 }
+    ]
+  },
+  {
+    "id": "action_sleep",
+    "labelKey": "action.sleep",
+    "descriptionKey": "action.sleep.description",
+    "targetKind": "self",
+    "animationId": "sleep",
+    "successMessageKey": "action.result.slept",
+    "tags": [ "rest" ],
+    "effects": [
+      { "type": "sleepToNextDay" }
+    ]
+  },
+  {
+    "id": "action_push",
+    "labelKey": "action.push",
+    "descriptionKey": "action.push.description",
+    "targetKind": "self",
+    "animationId": "push",
+    "successMessageKey": "action.result.pushed",
+    "tags": [ "interaction" ],
+    "effects": [
+      { "type": "changeNeed", "needId": "energy", "amount": -2 }
+    ]
+  },
+  {
+    "id": "action_pull",
+    "labelKey": "action.pull",
+    "descriptionKey": "action.pull.description",
+    "targetKind": "self",
+    "animationId": "pull",
+    "successMessageKey": "action.result.pulled",
+    "tags": [ "interaction" ],
+    "effects": [
+      { "type": "changeNeed", "needId": "energy", "amount": -2 }
+    ]
+  }
+]

@@ -77,6 +77,7 @@ The game can still run without this zip. When it is missing, the character previ
 - [Game Systems Roadmap](docs/GAME_SYSTEMS_ROADMAP.md)
 - [Character Presets](docs/CHARACTER_PRESETS.md)
 - [Character Animation](docs/CHARACTER_ANIMATION.md)
+- [Actions](docs/ACTIONS.md)
 - [Runtime State](docs/RUNTIME_STATE.md)
 - [Needs Simulation](docs/NEEDS_SIMULATION.md)
 

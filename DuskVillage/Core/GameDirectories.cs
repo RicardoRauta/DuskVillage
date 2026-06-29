@@ -27,6 +27,11 @@ public static class GameDirectories
         "Data",
         "Localization");
 
+    public static string ActionDefinitionsDirectory => Path.Combine(
+        AppContext.BaseDirectory,
+        "Data",
+        "Actions");
+
     public static string ManaSeedFarmerSpriteZipPath =>
         ManaSeedFarmerSpriteZipCandidates.FirstOrDefault(File.Exists) ??
         ManaSeedFarmerSpriteZipCandidates[0];

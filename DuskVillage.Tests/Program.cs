@@ -1,4 +1,5 @@
 using DuskVillage.Animations;
+using DuskVillage.Actions;
 using DuskVillage.CharacterAssets;
 using DuskVillage.Characters;
 using DuskVillage.Needs;
@@ -30,6 +31,10 @@ var tests = new (string Name, Action Run)[]
     ("Expanded character clips are four way", ExpandedCharacterClipsAreFourWay),
     ("Character animation timeline honors variable durations", CharacterAnimationTimelineHonorsVariableDurations),
     ("Character animation cell coordinates are stable", CharacterAnimationCellCoordinatesAreStable),
+    ("Action registry validates definitions", ActionRegistryValidatesDefinitions),
+    ("Action execution applies effects and time", ActionExecutionAppliesEffectsAndTime),
+    ("Action execution rejects invalid target", ActionExecutionRejectsInvalidTarget),
+    ("Action sleep advances to next day", ActionSleepAdvancesToNextDay),
     ("Old save world time normalizes", OldSaveWorldTimeNormalizes),
     ("Save game round-trips character preset", SaveGameRoundTripsCharacterPreset)
 };
@@ -471,6 +476,145 @@ static void CharacterAnimationCellCoordinatesAreStable()
     AssertEqual(3, CharacterAnimationCatalog.CellRow(49), "Cell 049 should be in row 3.");
     AssertEqual(0, CharacterAnimationCatalog.CellColumn(64), "Cell 064 should start a new row.");
     AssertEqual(4, CharacterAnimationCatalog.CellRow(64), "Cell 064 should be in row 4.");
+}
+
+static void ActionRegistryValidatesDefinitions()
+{
+    var registry = CreateTestActionRegistry();
+
+    Assert(registry.TryGet("test_work", out var definition), "Registry should find action by stable ID.");
+    AssertEqual("animation.work_station", "animation." + definition.AnimationId, "Action should reference animation by ID.");
+    AssertEqual(2, definition.Effects.Count, "Action should keep configured effects.");
+}
+
+static void ActionExecutionAppliesEffectsAndTime()
+{
+    var registry = CreateTestActionRegistry();
+    var preset = CharacterPresetFactory.CreateDefault();
+    var player = PlayerRuntimeFactory.CreateNew(preset);
+    player.Needs.Energy = 80;
+    player.Needs.Hunger = 70;
+
+    var result = GameActionSystem.Execute(
+        registry,
+        new GameActionRequest
+        {
+            ActionId = "test_work",
+            ActorEntityId = player.EntityId,
+            FacingDirection = CharacterFacingDirection.Right,
+            Target = GameActionTarget.Self(player.EntityId)
+        },
+        WorldClock.CreateDefault(),
+        player);
+
+    Assert(result.Succeeded, "Valid action should succeed.");
+    AssertEqual("06:30", result.WorldTime.CurrentTime, "Action time cost should advance world time.");
+    AssertEqual(72, result.PlayerState.Needs.Energy, "Action should apply energy effect.");
+    AssertEqual(70, result.PlayerState.Needs.Hunger, "Action should not apply passive elapsed needs by itself.");
+    AssertEqual(5, result.PlayerState.Money, "Action should apply money effect.");
+    AssertEqual(CharacterAnimationIds.WorkStation, result.AnimationId, "Action should expose animation ID.");
+    AssertEqual(CharacterFacingDirection.Right, result.FacingDirection, "Action should preserve facing direction.");
+    AssertEqual(80, player.Needs.Energy, "Action execution should not mutate original runtime state.");
+}
+
+static void ActionExecutionRejectsInvalidTarget()
+{
+    var registry = CreateTestActionRegistry();
+    var player = PlayerRuntimeFactory.CreateNew(CharacterPresetFactory.CreateDefault());
+
+    var result = GameActionSystem.Execute(
+        registry,
+        new GameActionRequest
+        {
+            ActionId = "test_tile",
+            ActorEntityId = player.EntityId,
+            Target = GameActionTarget.Self(player.EntityId)
+        },
+        WorldClock.CreateDefault(),
+        player);
+
+    Assert(!result.Succeeded, "Tile action should reject a self target.");
+    AssertEqual("action.result.invalid_target", result.MessageKey, "Invalid target should return a clear message key.");
+}
+
+static void ActionSleepAdvancesToNextDay()
+{
+    var registry = CreateTestActionRegistry();
+    var player = PlayerRuntimeFactory.CreateNew(CharacterPresetFactory.CreateDefault());
+    player.Needs.Energy = 10;
+    player.Needs.Hunger = 80;
+
+    var result = GameActionSystem.Execute(
+        registry,
+        new GameActionRequest
+        {
+            ActionId = "test_sleep",
+            ActorEntityId = player.EntityId,
+            Target = GameActionTarget.Self(player.EntityId)
+        },
+        new WorldTime
+        {
+            Day = 7,
+            TimeMinutes = 22 * 60
+        },
+        player);
+
+    Assert(result.Succeeded, "Sleep action should succeed.");
+    Assert(result.StartedNewDay, "Sleep action should start a new day.");
+    AssertEqual(8, result.WorldTime.Day, "Sleep should advance to next day.");
+    AssertEqual("06:00", result.WorldTime.CurrentTime, "Sleep should wake at morning.");
+    AssertEqual(100, result.PlayerState.Needs.Energy, "Sleep should restore energy.");
+    AssertEqual(72, result.PlayerState.Needs.Hunger, "Sleep should consume hunger.");
+}
+
+static GameActionRegistry CreateTestActionRegistry()
+{
+    return GameActionRegistry.FromDefinitions(
+    [
+        new GameActionDefinition
+        {
+            Id = "test_work",
+            LabelKey = "action.work_station",
+            TargetKind = GameActionTargetKinds.Self,
+            AnimationId = CharacterAnimationIds.WorkStation,
+            TimeCostMinutes = 30,
+            Effects =
+            [
+                new GameActionEffectDefinition
+                {
+                    Type = GameActionEffectTypes.ChangeNeed,
+                    NeedId = GameActionNeedIds.Energy,
+                    Amount = -8
+                },
+                new GameActionEffectDefinition
+                {
+                    Type = GameActionEffectTypes.AddMoney,
+                    Amount = 5
+                }
+            ]
+        },
+        new GameActionDefinition
+        {
+            Id = "test_tile",
+            LabelKey = "action.water",
+            TargetKind = GameActionTargetKinds.Tile,
+            AnimationId = CharacterAnimationIds.Water
+        },
+        new GameActionDefinition
+        {
+            Id = "test_sleep",
+            LabelKey = "action.sleep",
+            TargetKind = GameActionTargetKinds.Self,
+            AnimationId = CharacterAnimationIds.Sleep,
+            Effects =
+            [
+                new GameActionEffectDefinition
+                {
+                    Type = GameActionEffectTypes.SleepToNextDay
+                }
+            ]
+        }
+    ]);
 }
 
 static void SaveGameRoundTripsCharacterPreset()

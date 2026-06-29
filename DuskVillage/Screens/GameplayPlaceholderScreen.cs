@@ -26,6 +26,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         _session = session;
         _menu.Add(new ButtonControl("gameplay.advance_hour", AdvanceOneHour));
         _menu.Add(new ButtonControl("gameplay.sleep", SleepToNextDay));
+        _menu.Add(new ButtonControl("gameplay.actions", OpenActionPreview));
         _menu.Add(new ButtonControl("gameplay.animations", OpenAnimationPreview));
         _menu.Add(new ButtonControl("gameplay.save", SaveCurrentGame));
         _menu.Add(new ButtonControl("menu.settings", () => Context.Navigator.Push(new SettingsScreen(Context))));
@@ -137,6 +138,11 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         Context.Navigator.Push(new CharacterAnimationPreviewScreen(Context, _session.PlayerPreset));
     }
 
+    private void OpenActionPreview()
+    {
+        Context.Navigator.Push(new GameActionPreviewScreen(Context, _session));
+    }
+
     private void ReturnToMainMenu()
     {
         Context.Navigator.SetRoot(new MainMenuScreen(Context));
@@ -152,8 +158,8 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     {
         var controls = _menu.Controls;
         var buttonCount = controls.Count;
-        var footerWidth = Math.Min(Context.ViewBounds.Width - 80, 940);
-        var buttonGap = 14;
+        var footerWidth = Math.Min(Context.ViewBounds.Width - 80, 1120);
+        var buttonGap = 12;
         var buttonWidth = (footerWidth - buttonGap * (buttonCount - 1)) / buttonCount;
         var startX = CenterX(Context.ViewBounds, footerWidth);
         var buttonY = Context.ViewBounds.Bottom - 82;
