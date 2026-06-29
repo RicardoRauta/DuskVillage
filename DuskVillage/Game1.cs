@@ -25,7 +25,9 @@ namespace DuskVillage
         private FileSaveSlotProvider _saveSlots;
         private FileCharacterPresetStorage _characterPresetStorage;
         private ManaSeedCharacterAssetCatalog _characterAssetCatalog;
+        private ManaSeedCharacterTextureProvider _characterTextureProvider;
         private CharacterPortraitRenderer _characterPortraitRenderer;
+        private CharacterSpriteRenderer _characterSpriteRenderer;
         private GameScreenContext _screenContext;
 
         public Game1()
@@ -65,7 +67,9 @@ namespace DuskVillage
             _saveSlots = new FileSaveSlotProvider(GameDirectories.SavesDirectory);
             _characterPresetStorage = new FileCharacterPresetStorage(GameDirectories.CharacterPresetsDirectory);
             _characterAssetCatalog = ManaSeedCharacterAssetCatalog.Load(GameDirectories.ManaSeedFarmerSpriteZipPath);
-            _characterPortraitRenderer = new CharacterPortraitRenderer(GraphicsDevice, _characterAssetCatalog);
+            _characterTextureProvider = new ManaSeedCharacterTextureProvider(GraphicsDevice, _characterAssetCatalog);
+            _characterPortraitRenderer = new CharacterPortraitRenderer(_characterAssetCatalog, _characterTextureProvider);
+            _characterSpriteRenderer = new CharacterSpriteRenderer(_characterAssetCatalog, _characterTextureProvider);
 
             _screenContext = new GameScreenContext(
                 _graphics,
@@ -80,6 +84,7 @@ namespace DuskVillage
                 _characterPresetStorage,
                 _characterAssetCatalog,
                 _characterPortraitRenderer,
+                _characterSpriteRenderer,
                 _screenManager,
                 Exit,
                 ApplySettings);
@@ -105,7 +110,7 @@ namespace DuskVillage
 
         protected override void UnloadContent()
         {
-            _characterPortraitRenderer?.Dispose();
+            _characterTextureProvider?.Dispose();
             _pixel?.Dispose();
             _spriteBatch?.Dispose();
             base.UnloadContent();

@@ -1,3 +1,4 @@
+using DuskVillage.Animations;
 using DuskVillage.CharacterAssets;
 using DuskVillage.Characters;
 using DuskVillage.Needs;
@@ -24,6 +25,9 @@ var tests = new (string Name, Action Run)[]
     ("Needs elapsed time changes runtime needs", NeedsElapsedTimeChangesRuntimeNeeds),
     ("Needs low hunger affects mood and health", NeedsLowHungerAffectsMoodAndHealth),
     ("Needs sleep restores energy", NeedsSleepRestoresEnergy),
+    ("Character walk guide uses flip and durations", CharacterWalkGuideUsesFlipAndDurations),
+    ("Character animation timeline honors variable durations", CharacterAnimationTimelineHonorsVariableDurations),
+    ("Character animation cell coordinates are stable", CharacterAnimationCellCoordinatesAreStable),
     ("Old save world time normalizes", OldSaveWorldTimeNormalizes),
     ("Save game round-trips character preset", SaveGameRoundTripsCharacterPreset)
 };
@@ -353,6 +357,45 @@ static void NeedsSleepRestoresEnergy()
     AssertEqual(62, slept.Needs.Hunger, "Sleep should consume hunger.");
     AssertEqual(84, slept.Needs.Health, "Sleep should recover health if hunger is not low.");
     AssertEqual(56, slept.Needs.Mood, "Sleep should recover mood.");
+}
+
+static void CharacterWalkGuideUsesFlipAndDurations()
+{
+    var clip = CharacterAnimationCatalog.GetClip(CharacterAnimationIds.Walk, CharacterFacingDirection.Down);
+
+    AssertEqual(6, clip.Frames.Count, "Down walk should use the six guide frames.");
+    AssertEqual(48, clip.Frames[0].CellIndex, "First down walk frame should use cell 048.");
+    AssertEqual(80, clip.Frames[0].DurationMilliseconds, "First down walk frame should use guide duration 080.");
+    AssertEqual(49, clip.Frames[1].CellIndex, "Second down walk frame should use cell 049.");
+    AssertEqual(55, clip.Frames[1].DurationMilliseconds, "Second down walk frame should use guide duration 055.");
+    AssertEqual(51, clip.Frames[2].CellIndex, "Third down walk frame should use cell 051.");
+    AssertEqual(115, clip.Frames[2].DurationMilliseconds, "Third down walk frame should use guide duration 115.");
+    Assert(clip.Frames[3].FlipX, "Guide reverse marker should become flipX on repeated down walk frames.");
+}
+
+static void CharacterAnimationTimelineHonorsVariableDurations()
+{
+    var state = new CharacterAnimationState();
+    CharacterAnimationSystem.SetMotion(state, CharacterAnimationIds.Walk, CharacterFacingDirection.Down);
+
+    AssertEqual(48, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Walk should start on first frame.");
+
+    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(79));
+    AssertEqual(48, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 048 should last through 79ms.");
+
+    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(1));
+    AssertEqual(49, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 049 should start at 80ms.");
+
+    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(55));
+    AssertEqual(51, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 051 should start after the 055ms middle frame.");
+}
+
+static void CharacterAnimationCellCoordinatesAreStable()
+{
+    AssertEqual(1, CharacterAnimationCatalog.CellColumn(49), "Cell 049 should be in column 1.");
+    AssertEqual(3, CharacterAnimationCatalog.CellRow(49), "Cell 049 should be in row 3.");
+    AssertEqual(0, CharacterAnimationCatalog.CellColumn(64), "Cell 064 should start a new row.");
+    AssertEqual(4, CharacterAnimationCatalog.CellRow(64), "Cell 064 should be in row 4.");
 }
 
 static void SaveGameRoundTripsCharacterPreset()

@@ -1,11 +1,14 @@
 using System;
+using DuskVillage.Animations;
 using DuskVillage.Characters;
 using DuskVillage.Core;
+using DuskVillage.Input;
 using DuskVillage.Needs;
 using DuskVillage.Saving;
 using DuskVillage.UI;
 using DuskVillage.World;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
 namespace DuskVillage.Screens;
 
@@ -13,6 +16,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 {
     private readonly GameSessionSummary _session;
     private readonly VerticalMenu _menu = new();
+    private readonly CharacterAnimationState _playerAnimation = new();
     private double _savedMessageTimer;
     private string _savedMessage = string.Empty;
 
@@ -36,6 +40,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         }
 
         LayoutMenu();
+        UpdatePlayerAnimation(gameTime);
         _menu.Update(Context);
 
         if (_savedMessageTimer > 0)
@@ -57,7 +62,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         var preview = new Rectangle(panel.Right - 230, panel.Y + 34, 176, 176);
         draw.Fill(preview, draw.Theme.BackgroundTop);
         draw.Border(preview, draw.Theme.Border);
-        Context.CharacterPortraitRenderer.Draw(draw, _session.PlayerPreset.Appearance, preview);
+        Context.CharacterSpriteRenderer.Draw(draw, _session.PlayerPreset.Appearance, _playerAnimation, preview);
 
         var y = panel.Y + 26;
         var sourceText = _session.Source == "save_slot"
@@ -190,5 +195,52 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         return string.IsNullOrWhiteSpace(preset.FamilyName)
             ? preset.Name
             : $"{preset.Name} {preset.FamilyName}";
+    }
+
+    private void UpdatePlayerAnimation(GameTime gameTime)
+    {
+        var movementDirection = ReadMovementDirection(Context.Input.Current);
+        var isMoving = movementDirection.HasValue;
+        var facingDirection = movementDirection ?? _playerAnimation.FacingDirection;
+        var animationId = isMoving ? CharacterAnimationIds.Walk : CharacterAnimationIds.Idle;
+
+        CharacterAnimationSystem.SetMotion(_playerAnimation, animationId, facingDirection);
+        CharacterAnimationSystem.Advance(_playerAnimation, gameTime.ElapsedGameTime);
+    }
+
+    private static CharacterFacingDirection? ReadMovementDirection(InputSnapshot input)
+    {
+        if (input.IsKeyDown(Keys.W))
+        {
+            return CharacterFacingDirection.Up;
+        }
+
+        if (input.IsKeyDown(Keys.S))
+        {
+            return CharacterFacingDirection.Down;
+        }
+
+        if (input.IsKeyDown(Keys.D))
+        {
+            return CharacterFacingDirection.Right;
+        }
+
+        if (input.IsKeyDown(Keys.A))
+        {
+            return CharacterFacingDirection.Left;
+        }
+
+        var thumbstick = input.GamePad.ThumbSticks.Left;
+        if (Math.Abs(thumbstick.X) > Math.Abs(thumbstick.Y) && Math.Abs(thumbstick.X) > 0.35f)
+        {
+            return thumbstick.X > 0 ? CharacterFacingDirection.Right : CharacterFacingDirection.Left;
+        }
+
+        if (Math.Abs(thumbstick.Y) > 0.35f)
+        {
+            return thumbstick.Y > 0 ? CharacterFacingDirection.Up : CharacterFacingDirection.Down;
+        }
+
+        return null;
     }
 }

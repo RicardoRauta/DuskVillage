@@ -25,6 +25,7 @@ public sealed class GameScreenContext
         ICharacterPresetStorage characterPresetStorage,
         ManaSeedCharacterAssetCatalog characterAssets,
         CharacterPortraitRenderer characterPortraitRenderer,
+        CharacterSpriteRenderer characterSpriteRenderer,
         IScreenNavigator navigator,
         Action exitGame,
         Action<GameSettings> applySettings)
@@ -41,6 +42,7 @@ public sealed class GameScreenContext
         CharacterPresetStorage = characterPresetStorage;
         CharacterAssets = characterAssets;
         CharacterPortraitRenderer = characterPortraitRenderer;
+        CharacterSpriteRenderer = characterSpriteRenderer;
         Navigator = navigator;
         ExitGame = exitGame;
         ApplySettings = applySettings;
@@ -69,6 +71,8 @@ public sealed class GameScreenContext
     public ManaSeedCharacterAssetCatalog CharacterAssets { get; }
 
     public CharacterPortraitRenderer CharacterPortraitRenderer { get; }
+
+    public CharacterSpriteRenderer CharacterSpriteRenderer { get; }
 
     public IScreenNavigator Navigator { get; }
 
