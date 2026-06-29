@@ -1,6 +1,7 @@
 using System;
 using DuskVillage.Characters;
 using DuskVillage.Core;
+using DuskVillage.World;
 
 namespace DuskVillage.Saving;
 
@@ -16,6 +17,7 @@ public sealed class SaveGame
     {
         var now = DateTimeOffset.UtcNow;
         var playerPreset = preset.Clone();
+        var worldTime = WorldClock.CreateDefault();
         return new SaveGame
         {
             Metadata = new SaveMetadata
@@ -25,14 +27,10 @@ public sealed class SaveGame
                 CreatedAt = now,
                 LastPlayedAt = now,
                 PlayerName = FullName(playerPreset),
-                CurrentDay = 1,
-                CurrentTime = "06:00"
+                CurrentDay = worldTime.Day,
+                CurrentTime = worldTime.CurrentTime
             },
-            WorldState = new SaveWorldState
-            {
-                Day = 1,
-                TimeMinutes = 360
-            },
+            WorldState = SaveWorldState.FromWorldTime(worldTime),
             PlayerState = new SavePlayerState
             {
                 EntityId = "player_main",
@@ -43,6 +41,11 @@ public sealed class SaveGame
 
     public void Touch()
     {
+        Metadata ??= new SaveMetadata();
+        WorldState ??= SaveWorldState.CreateDefault();
+        PlayerState ??= new SavePlayerState();
+        PlayerState.CharacterPreset ??= CharacterPresetFactory.CreateDefault();
+        WorldState.Apply(WorldState);
         Metadata.LastPlayedAt = DateTimeOffset.UtcNow;
         Metadata.PlayerName = FullName(PlayerState.CharacterPreset);
         Metadata.CurrentDay = WorldState.Day;

@@ -1,6 +1,7 @@
 using DuskVillage.CharacterAssets;
 using DuskVillage.Characters;
 using DuskVillage.Saving;
+using DuskVillage.World;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -11,6 +12,12 @@ var tests = new (string Name, Action Run)[]
     ("Identity fields validate", IdentityFieldsValidate),
     ("Required appearance slots reject none", RequiredAppearanceSlotsRejectNone),
     ("Mana Seed asset parser keeps stable IDs", ManaSeedAssetParserKeepsStableIds),
+    ("World clock default starts at morning", WorldClockDefaultStartsAtMorning),
+    ("World clock advances within day", WorldClockAdvancesWithinDay),
+    ("World clock formats past midnight", WorldClockFormatsPastMidnight),
+    ("World clock forces day end after late night", WorldClockForcesDayEndAfterLateNight),
+    ("World calendar rolls season and year", WorldCalendarRollsSeasonAndYear),
+    ("Old save world time normalizes", OldSaveWorldTimeNormalizes),
     ("Save game round-trips character preset", SaveGameRoundTripsCharacterPreset)
 };
 
@@ -128,6 +135,91 @@ static void ManaSeedAssetParserKeepsStableIds()
     AssertEqual("e", parts.SpecialId, "Special ID should be parsed.");
 }
 
+static void WorldClockDefaultStartsAtMorning()
+{
+    var time = WorldClock.CreateDefault();
+
+    AssertEqual(1, time.Day, "Default day should start at 1.");
+    AssertEqual(WorldCalendarRules.Spring, time.CurrentSeason, "Default season should be spring.");
+    AssertEqual(1, time.Year, "Default year should start at 1.");
+    AssertEqual("06:00", time.CurrentTime, "Default time should start at 06:00.");
+}
+
+static void WorldClockAdvancesWithinDay()
+{
+    var result = WorldClock.Advance(WorldClock.CreateDefault(), 60);
+
+    Assert(!result.StartedNewDay, "Advancing one hour from morning should not start a new day.");
+    Assert(!result.ForcedDayEnd, "Advancing one hour from morning should not force day end.");
+    AssertEqual("07:00", result.Time.CurrentTime, "06:00 plus one hour should be 07:00.");
+}
+
+static void WorldClockFormatsPastMidnight()
+{
+    var time = new WorldTime
+    {
+        Day = 1,
+        TimeMinutes = 23 * 60 + 30
+    };
+
+    var result = WorldClock.Advance(time, 60);
+
+    Assert(!result.StartedNewDay, "Crossing midnight before the late-night limit should keep the same active day.");
+    AssertEqual(1, result.Time.Day, "Midnight should still belong to the active day before forced day end.");
+    AssertEqual("00:30", result.Time.CurrentTime, "Past midnight should format as 00:30.");
+}
+
+static void WorldClockForcesDayEndAfterLateNight()
+{
+    var time = new WorldTime
+    {
+        Day = 1,
+        TimeMinutes = 90
+    };
+
+    var result = WorldClock.Advance(time, 60);
+
+    Assert(result.StartedNewDay, "Advancing beyond 02:00 should start a new day.");
+    Assert(result.ForcedDayEnd, "Advancing beyond 02:00 should be a forced day end.");
+    AssertEqual(2, result.Time.Day, "Forced day end should advance the day.");
+    AssertEqual("06:00", result.Time.CurrentTime, "Forced day end should wake at 06:00.");
+}
+
+static void WorldCalendarRollsSeasonAndYear()
+{
+    var day29 = WorldClock.Normalize(new WorldTime { Day = 29 });
+    var day113 = WorldClock.Normalize(new WorldTime { Day = 113 });
+
+    AssertEqual(WorldCalendarRules.Summer, day29.CurrentSeason, "Day 29 should be summer.");
+    AssertEqual(1, day29.DayOfSeason, "Day 29 should be day 1 of summer.");
+    AssertEqual(WorldCalendarRules.Spring, day113.CurrentSeason, "Day 113 should roll back to spring.");
+    AssertEqual(2, day113.Year, "Day 113 should start year 2.");
+}
+
+static void OldSaveWorldTimeNormalizes()
+{
+    const string json = """
+    {
+      "metadata": {
+        "saveVersion": 1,
+        "gameVersion": "0.1.0",
+        "playerName": "Legacy"
+      },
+      "worldState": {
+        "day": 29,
+        "timeMinutes": 480
+      }
+    }
+    """;
+
+    var loaded = SaveGameSerializer.Deserialize(json);
+
+    AssertEqual(29, loaded.WorldState.Day, "Legacy save day should load.");
+    AssertEqual("08:00", loaded.WorldState.CurrentTime, "Legacy save time should load.");
+    AssertEqual(WorldCalendarRules.Summer, loaded.WorldState.CurrentSeason, "Legacy save season should be derived.");
+    AssertEqual(1, loaded.WorldState.Year, "Legacy save year should be derived.");
+}
+
 static void SaveGameRoundTripsCharacterPreset()
 {
     var preset = CharacterPresetFactory.CreateDefault();
@@ -136,12 +228,22 @@ static void SaveGameRoundTripsCharacterPreset()
     preset.Appearance.SetPalette(CharacterAppearanceSlotIds.Hair, "hair_red");
 
     var saveGame = SaveGame.CreateNew(preset);
+    saveGame.WorldState = SaveWorldState.FromWorldTime(new WorldTime
+    {
+        Day = 113,
+        TimeMinutes = 75
+    });
+
     var json = SaveGameSerializer.Serialize(saveGame);
     var loaded = SaveGameSerializer.Deserialize(json);
 
     AssertEqual("Rook", loaded.PlayerState.CharacterPreset.Name, "Save should keep player preset name.");
     AssertEqual("fbas_13hair_mohawk_00_e", loaded.PlayerState.CharacterPreset.Appearance.GetLayer(CharacterAppearanceSlotIds.Hair), "Save should keep appearance.");
     AssertEqual("hair_red", loaded.PlayerState.CharacterPreset.Appearance.GetPalette(CharacterAppearanceSlotIds.Hair), "Save should keep palette.");
+    AssertEqual(113, loaded.WorldState.Day, "Save should keep world day.");
+    AssertEqual("01:15", loaded.WorldState.CurrentTime, "Save should keep world time.");
+    AssertEqual(WorldCalendarRules.Spring, loaded.WorldState.CurrentSeason, "Save should keep normalized season.");
+    AssertEqual(2, loaded.WorldState.Year, "Save should keep normalized year.");
 }
 
 static void Assert(bool condition, string message)

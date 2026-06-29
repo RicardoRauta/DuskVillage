@@ -1,5 +1,6 @@
 using DuskVillage.Characters;
 using DuskVillage.Saving;
+using DuskVillage.World;
 
 namespace DuskVillage.Core;
 
@@ -19,9 +20,11 @@ public sealed class GameSessionSummary
 
     public int SlotNumber { get; set; }
 
-    public int CurrentDay { get; set; } = 1;
+    public WorldTime WorldTime { get; set; } = WorldClock.CreateDefault();
 
-    public string CurrentTime { get; set; } = "06:00";
+    public int CurrentDay => WorldTime.Day;
+
+    public string CurrentTime => WorldTime.CurrentTime;
 
     public static GameSessionSummary FromNewGame(NewGameOptions options)
     {
@@ -34,8 +37,7 @@ public sealed class GameSessionSummary
             PlayerName = preset.Name,
             AgeCategoryId = preset.AgeCategoryId,
             OriginId = preset.OriginId,
-            CurrentDay = 1,
-            CurrentTime = "06:00"
+            WorldTime = WorldClock.CreateDefault()
         };
     }
 
@@ -52,8 +54,7 @@ public sealed class GameSessionSummary
             SlotNumber = slot.SlotNumber,
             AgeCategoryId = preset.AgeCategoryId,
             OriginId = preset.OriginId,
-            CurrentDay = saveGame.WorldState.Day,
-            CurrentTime = saveGame.WorldState.CurrentTime
+            WorldTime = WorldClock.Normalize(saveGame.WorldState)
         };
     }
 }

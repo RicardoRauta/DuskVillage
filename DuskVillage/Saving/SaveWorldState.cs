@@ -1,10 +1,32 @@
+using DuskVillage.World;
+
 namespace DuskVillage.Saving;
 
-public sealed class SaveWorldState
+public sealed class SaveWorldState : WorldTime
 {
-    public int Day { get; set; } = 1;
+    public static SaveWorldState CreateDefault()
+    {
+        return FromWorldTime(WorldClock.CreateDefault());
+    }
 
-    public int TimeMinutes { get; set; } = 360;
+    public static SaveWorldState FromWorldTime(WorldTime time)
+    {
+        var normalized = WorldClock.Normalize(time);
+        return new SaveWorldState
+        {
+            Day = normalized.Day,
+            TimeMinutes = normalized.TimeMinutes,
+            CurrentSeason = normalized.CurrentSeason,
+            Year = normalized.Year
+        };
+    }
 
-    public string CurrentTime => $"{TimeMinutes / 60:00}:{TimeMinutes % 60:00}";
+    public void Apply(WorldTime time)
+    {
+        var normalized = WorldClock.Normalize(time);
+        Day = normalized.Day;
+        TimeMinutes = normalized.TimeMinutes;
+        CurrentSeason = normalized.CurrentSeason;
+        Year = normalized.Year;
+    }
 }

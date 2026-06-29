@@ -1,7 +1,9 @@
+using System;
 using DuskVillage.Characters;
 using DuskVillage.Core;
 using DuskVillage.Saving;
 using DuskVillage.UI;
+using DuskVillage.World;
 using Microsoft.Xna.Framework;
 
 namespace DuskVillage.Screens;
@@ -17,6 +19,8 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         : base(context)
     {
         _session = session;
+        _menu.Add(new ButtonControl("gameplay.advance_hour", AdvanceOneHour));
+        _menu.Add(new ButtonControl("gameplay.sleep", SleepToNextDay));
         _menu.Add(new ButtonControl("gameplay.save", SaveCurrentGame));
         _menu.Add(new ButtonControl("menu.settings", () => Context.Navigator.Push(new SettingsScreen(Context))));
         _menu.Add(new ButtonControl("gameplay.return_menu", ReturnToMainMenu));
@@ -30,7 +34,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
             return;
         }
 
-        _menu.Arrange(CenterX(Context.ViewBounds, 420), Context.ViewBounds.Bottom - 194, 420, 48, 12);
+        LayoutMenu();
         _menu.Update(Context);
 
         if (_savedMessageTimer > 0)
@@ -61,7 +65,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
         DrawLine(draw, sourceText, panel.X + 28, ref y, draw.Theme.Accent);
         DrawLine(draw, T("gameplay.player", FullName(_session.PlayerPreset)), panel.X + 28, ref y, draw.Theme.Text);
-        DrawLine(draw, T("gameplay.day_time", _session.CurrentDay, _session.CurrentTime), panel.X + 28, ref y, draw.Theme.Text);
+        DrawLine(draw, T("gameplay.world_time", _session.WorldTime.Day, T("season." + _session.WorldTime.CurrentSeason), _session.WorldTime.DayOfSeason, _session.WorldTime.Year, _session.WorldTime.CurrentTime), panel.X + 28, ref y, draw.Theme.Text);
         DrawLine(draw, T("gameplay.age", T("age." + _session.PlayerPreset.AgeCategoryId)), panel.X + 28, ref y, draw.Theme.Text);
         DrawLine(draw, T("gameplay.origin", T("origin." + _session.PlayerPreset.OriginId)), panel.X + 28, ref y, draw.Theme.Text);
         DrawLine(draw, T("character.birthday", T("season." + _session.PlayerPreset.BirthdaySeasonId), _session.PlayerPreset.BirthdayDay), panel.X + 28, ref y, draw.Theme.Text, 0.86f);
@@ -81,19 +85,31 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         EndUi();
     }
 
+    private void AdvanceOneHour()
+    {
+        var result = WorldClock.Advance(_session.WorldTime, 60);
+        _session.WorldTime = result.Time;
+        ShowMessage(result.ForcedDayEnd ? T("gameplay.forced_day_end") : T("gameplay.time_advanced"));
+    }
+
+    private void SleepToNextDay()
+    {
+        var result = WorldClock.SleepToNextDay(_session.WorldTime);
+        _session.WorldTime = result.Time;
+        ShowMessage(T("gameplay.slept"));
+    }
+
     private void SaveCurrentGame()
     {
         var saveGame = SaveGame.CreateNew(_session.PlayerPreset);
-        saveGame.WorldState.Day = _session.CurrentDay;
-        saveGame.WorldState.TimeMinutes = ParseTime(_session.CurrentTime);
+        saveGame.WorldState = SaveWorldState.FromWorldTime(_session.WorldTime);
         var slotNumber = _session.SlotNumber > 0 ? _session.SlotNumber : Context.SaveSlots.FindFirstWritableSlotNumber();
         Context.SaveSlots.SaveGame(slotNumber, saveGame);
 
         _session.Source = "save_slot";
         _session.SlotNumber = slotNumber;
         _session.SlotId = $"slot_{slotNumber}";
-        _savedMessage = T("gameplay.saved", slotNumber);
-        _savedMessageTimer = 2.5;
+        ShowMessage(T("gameplay.saved", slotNumber));
     }
 
     private void ReturnToMainMenu()
@@ -107,15 +123,27 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         y += (int)(30 * UiScale * scale);
     }
 
-    private static int ParseTime(string currentTime)
+    private void LayoutMenu()
     {
-        var parts = currentTime.Split(':');
-        if (parts.Length == 2 && int.TryParse(parts[0], out var hours) && int.TryParse(parts[1], out var minutes))
-        {
-            return hours * 60 + minutes;
-        }
+        var controls = _menu.Controls;
+        var buttonCount = controls.Count;
+        var footerWidth = Math.Min(Context.ViewBounds.Width - 80, 940);
+        var buttonGap = 14;
+        var buttonWidth = (footerWidth - buttonGap * (buttonCount - 1)) / buttonCount;
+        var startX = CenterX(Context.ViewBounds, footerWidth);
+        var buttonY = Context.ViewBounds.Bottom - 82;
 
-        return 360;
+        for (var i = 0; i < buttonCount; i++)
+        {
+            controls[i].Bounds = new Rectangle(startX + i * (buttonWidth + buttonGap), buttonY, buttonWidth, 48);
+            controls[i].PointerClipBounds = null;
+        }
+    }
+
+    private void ShowMessage(string message)
+    {
+        _savedMessage = message;
+        _savedMessageTimer = 2.5;
     }
 
     private static string FullName(CharacterPreset preset)
