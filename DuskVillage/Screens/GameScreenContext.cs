@@ -6,6 +6,7 @@ using DuskVillage.Localization;
 using DuskVillage.Rendering;
 using DuskVillage.Saving;
 using DuskVillage.Settings;
+using DuskVillage.WorldAssets;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -25,6 +26,8 @@ public sealed class GameScreenContext
         ISaveSlotProvider saveSlots,
         ICharacterPresetStorage characterPresetStorage,
         GameActionRegistry actions,
+        SeasonalWorldAssetCatalog worldAssets,
+        SeasonalWorldTextureProvider seasonalWorldTextures,
         ManaSeedCharacterAssetCatalog characterAssets,
         CharacterPortraitRenderer characterPortraitRenderer,
         CharacterSpriteRenderer characterSpriteRenderer,
@@ -43,6 +46,8 @@ public sealed class GameScreenContext
         SaveSlots = saveSlots;
         CharacterPresetStorage = characterPresetStorage;
         Actions = actions;
+        WorldAssets = worldAssets;
+        SeasonalWorldTextures = seasonalWorldTextures;
         CharacterAssets = characterAssets;
         CharacterPortraitRenderer = characterPortraitRenderer;
         CharacterSpriteRenderer = characterSpriteRenderer;
@@ -72,6 +77,10 @@ public sealed class GameScreenContext
     public ICharacterPresetStorage CharacterPresetStorage { get; }
 
     public GameActionRegistry Actions { get; }
+
+    public SeasonalWorldAssetCatalog WorldAssets { get; }
+
+    public SeasonalWorldTextureProvider SeasonalWorldTextures { get; }
 
     public ManaSeedCharacterAssetCatalog CharacterAssets { get; }
 

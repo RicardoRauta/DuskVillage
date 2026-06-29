@@ -7,6 +7,7 @@ using DuskVillage.Rendering;
 using DuskVillage.Saving;
 using DuskVillage.Screens;
 using DuskVillage.Settings;
+using DuskVillage.WorldAssets;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -26,6 +27,8 @@ namespace DuskVillage
         private FileSaveSlotProvider _saveSlots;
         private FileCharacterPresetStorage _characterPresetStorage;
         private GameActionRegistry _actionRegistry;
+        private SeasonalWorldAssetCatalog _worldAssetCatalog;
+        private SeasonalWorldTextureProvider _seasonalWorldTextureProvider;
         private ManaSeedCharacterAssetCatalog _characterAssetCatalog;
         private ManaSeedCharacterTextureProvider _characterTextureProvider;
         private CharacterPortraitRenderer _characterPortraitRenderer;
@@ -69,6 +72,8 @@ namespace DuskVillage
             _saveSlots = new FileSaveSlotProvider(GameDirectories.SavesDirectory);
             _characterPresetStorage = new FileCharacterPresetStorage(GameDirectories.CharacterPresetsDirectory);
             _actionRegistry = GameActionRegistry.LoadFromDirectories(GameDirectories.ActionDefinitionsDirectory);
+            _worldAssetCatalog = SeasonalWorldAssetCatalog.LoadFromDirectory(GameDirectories.WorldAssetDefinitionsDirectory);
+            _seasonalWorldTextureProvider = new SeasonalWorldTextureProvider(GraphicsDevice);
             _characterAssetCatalog = ManaSeedCharacterAssetCatalog.Load(GameDirectories.ManaSeedFarmerSpriteZipPath);
             _characterTextureProvider = new ManaSeedCharacterTextureProvider(GraphicsDevice, _characterAssetCatalog);
             _characterPortraitRenderer = new CharacterPortraitRenderer(_characterAssetCatalog, _characterTextureProvider);
@@ -86,6 +91,8 @@ namespace DuskVillage
                 _saveSlots,
                 _characterPresetStorage,
                 _actionRegistry,
+                _worldAssetCatalog,
+                _seasonalWorldTextureProvider,
                 _characterAssetCatalog,
                 _characterPortraitRenderer,
                 _characterSpriteRenderer,
@@ -114,6 +121,7 @@ namespace DuskVillage
 
         protected override void UnloadContent()
         {
+            _seasonalWorldTextureProvider?.Dispose();
             _characterTextureProvider?.Dispose();
             _pixel?.Dispose();
             _spriteBatch?.Dispose();

@@ -1,0 +1,130 @@
+[
+  {
+    "seasonId": "spring",
+    "zipFileName": "20.05c - Spring Forest 4.3.zip",
+    "variantId": "default",
+    "assets": [
+      {
+        "id": "terrain_wang",
+        "entryPath": "spring sheets/spring forest wang tiles.png",
+        "tileWidth": 16,
+        "tileHeight": 16
+      },
+      {
+        "id": "terrain_objects",
+        "entryPath": "spring sheets/spring forest.png",
+        "tileWidth": 16,
+        "tileHeight": 16
+      },
+      {
+        "id": "trees",
+        "entryPath": "spring sheets/spring trees 80x112.png",
+        "tileWidth": 80,
+        "tileHeight": 112
+      },
+      {
+        "id": "tall_grass_effect",
+        "entryPath": "spring animations/spring tall grass effect.png",
+        "tileWidth": 32,
+        "tileHeight": 32,
+        "frameDurationMilliseconds": 100
+      }
+    ]
+  },
+  {
+    "seasonId": "summer",
+    "zipFileName": "20.04c - Summer Forest 4.3.zip",
+    "variantId": "default",
+    "assets": [
+      {
+        "id": "terrain_wang",
+        "entryPath": "summer sheets/summer forest wang tiles.png",
+        "tileWidth": 16,
+        "tileHeight": 16
+      },
+      {
+        "id": "terrain_objects",
+        "entryPath": "summer sheets/summer forest.png",
+        "tileWidth": 16,
+        "tileHeight": 16
+      },
+      {
+        "id": "trees",
+        "entryPath": "summer sheets/summer trees 80x112.png",
+        "tileWidth": 80,
+        "tileHeight": 112
+      },
+      {
+        "id": "tall_grass_effect",
+        "entryPath": "summer animations/summer tall grass effect 32x32.png",
+        "tileWidth": 32,
+        "tileHeight": 32,
+        "frameDurationMilliseconds": 100
+      }
+    ]
+  },
+  {
+    "seasonId": "autumn",
+    "zipFileName": "20.06a - Autumn Forest 4.3.zip",
+    "variantId": "leaves",
+    "assets": [
+      {
+        "id": "terrain_wang",
+        "entryPath": "autumn sheets/autumn forest wang tiles.png",
+        "tileWidth": 16,
+        "tileHeight": 16
+      },
+      {
+        "id": "terrain_objects",
+        "entryPath": "autumn sheets/autumn forest (leaves).png",
+        "tileWidth": 16,
+        "tileHeight": 16
+      },
+      {
+        "id": "trees",
+        "entryPath": "autumn sheets/autumn trees (leaves) 80x112.png",
+        "tileWidth": 80,
+        "tileHeight": 112
+      },
+      {
+        "id": "tall_grass_effect",
+        "entryPath": "autumn animations/autumn tall grass effect 32x32.png",
+        "tileWidth": 32,
+        "tileHeight": 32,
+        "frameDurationMilliseconds": 100
+      }
+    ]
+  },
+  {
+    "seasonId": "winter",
+    "zipFileName": "20.07a - Winter Forest 4.3.zip",
+    "variantId": "snowy",
+    "assets": [
+      {
+        "id": "terrain_wang",
+        "entryPath": "winter sheets/winter forest wang tiles (snowy).png",
+        "tileWidth": 16,
+        "tileHeight": 16
+      },
+      {
+        "id": "terrain_objects",
+        "entryPath": "winter sheets/winter forest (snowy).png",
+        "tileWidth": 16,
+        "tileHeight": 16
+      },
+      {
+        "id": "trees",
+        "entryPath": "winter sheets/winter trees (snowy) 80x112.png",
+        "tileWidth": 80,
+        "tileHeight": 112
+      },
+      {
+        "id": "tall_grass_effect",
+        "entryPath": "winter animations/winter tall grass effect 32x32.png",
+        "tileWidth": 32,
+        "tileHeight": 32,
+        "frameDurationMilliseconds": 100
+      }
+    ]
+  }
+]

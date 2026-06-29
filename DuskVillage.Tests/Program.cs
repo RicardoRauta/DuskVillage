@@ -6,6 +6,8 @@ using DuskVillage.Needs;
 using DuskVillage.Players;
 using DuskVillage.Saving;
 using DuskVillage.World;
+using DuskVillage.WorldAssets;
+using System.IO.Compression;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -21,6 +23,8 @@ var tests = new (string Name, Action Run)[]
     ("World clock formats past midnight", WorldClockFormatsPastMidnight),
     ("World clock forces day end after late night", WorldClockForcesDayEndAfterLateNight),
     ("World calendar rolls season and year", WorldCalendarRollsSeasonAndYear),
+    ("Seasonal world asset catalog loads stable IDs", SeasonalWorldAssetCatalogLoadsStableIds),
+    ("Seasonal world asset catalog supports missing zips", SeasonalWorldAssetCatalogSupportsMissingZips),
     ("Player runtime starts from preset needs", PlayerRuntimeStartsFromPresetNeeds),
     ("Old save player runtime normalizes", OldSavePlayerRuntimeNormalizes),
     ("Needs elapsed time changes runtime needs", NeedsElapsedTimeChangesRuntimeNeeds),
@@ -212,6 +216,104 @@ static void WorldCalendarRollsSeasonAndYear()
     AssertEqual(1, day29.DayOfSeason, "Day 29 should be day 1 of summer.");
     AssertEqual(WorldCalendarRules.Spring, day113.CurrentSeason, "Day 113 should roll back to spring.");
     AssertEqual(2, day113.Year, "Day 113 should start year 2.");
+}
+
+static void SeasonalWorldAssetCatalogLoadsStableIds()
+{
+    var root = CreateTempDirectory();
+    try
+    {
+        var definitionsDirectory = Path.Combine(root, "definitions");
+        var contentDirectory = Path.Combine(root, "content");
+        Directory.CreateDirectory(definitionsDirectory);
+        Directory.CreateDirectory(contentDirectory);
+
+        File.WriteAllText(Path.Combine(definitionsDirectory, "seasonal_assets.json"), """
+        [
+          {
+            "seasonId": "spring",
+            "zipFileName": "spring.zip",
+            "variantId": "default",
+            "assets": [
+              {
+                "id": "terrain_wang",
+                "entryPath": "spring sheets/spring forest wang tiles.png",
+                "tileWidth": 16,
+                "tileHeight": 16
+              }
+            ]
+          }
+        ]
+        """);
+        CreateZipWithEntries(
+            Path.Combine(contentDirectory, "spring.zip"),
+            "spring sheets/spring forest wang tiles.png");
+
+        var catalog = SeasonalWorldAssetCatalog.LoadFromDirectories([definitionsDirectory], [contentDirectory]);
+
+        Assert(catalog.TryGetPack(WorldCalendarRules.Spring, out var pack), "Catalog should load spring pack.");
+        AssertEqual("default", pack.VariantId, "Spring variant should load.");
+        Assert(pack.IsAvailable, "Pack should be available when the zip entry exists.");
+
+        var asset = pack.FindAsset(SeasonalWorldAssetIds.TerrainWang);
+        Assert(asset != null, "Pack should find the stable terrain asset ID.");
+        AssertEqual("spring/terrain_wang", asset.StableId, "Stable asset ID should combine season and asset ID.");
+        AssertEqual(16, asset.TileWidth, "Tile width should load.");
+        AssertEqual(16, asset.TileHeight, "Tile height should load.");
+        Assert(asset.ZipExists, "Asset should report existing zip.");
+        Assert(asset.EntryExists, "Asset should report existing zip entry.");
+        Assert(asset.IsAvailable, "Asset should be available when zip and entry exist.");
+    }
+    finally
+    {
+        DeleteTempDirectory(root);
+    }
+}
+
+static void SeasonalWorldAssetCatalogSupportsMissingZips()
+{
+    var root = CreateTempDirectory();
+    try
+    {
+        var definitionsDirectory = Path.Combine(root, "definitions");
+        var contentDirectory = Path.Combine(root, "content");
+        Directory.CreateDirectory(definitionsDirectory);
+        Directory.CreateDirectory(contentDirectory);
+
+        File.WriteAllText(Path.Combine(definitionsDirectory, "seasonal_assets.json"), """
+        [
+          {
+            "seasonId": "winter",
+            "zipFileName": "missing.zip",
+            "variantId": "snowy",
+            "assets": [
+              {
+                "id": "trees",
+                "entryPath": "winter sheets/winter trees (snowy) 80x112.png",
+                "tileWidth": 80,
+                "tileHeight": 112
+              }
+            ]
+          }
+        ]
+        """);
+
+        var catalog = SeasonalWorldAssetCatalog.LoadFromDirectories([definitionsDirectory], [contentDirectory]);
+
+        Assert(catalog.TryGetPack(WorldCalendarRules.Winter, out var pack), "Catalog should load definition even when zip is missing.");
+        Assert(!pack.IsAvailable, "Pack should be unavailable when its zip is missing.");
+
+        var asset = pack.FindAsset(SeasonalWorldAssetIds.Trees);
+        Assert(asset != null, "Missing zip should not remove the asset definition.");
+        AssertEqual("winter/trees", asset.StableId, "Missing assets should keep stable IDs.");
+        Assert(!asset.ZipExists, "Asset should report missing zip.");
+        Assert(!asset.EntryExists, "Asset should report missing zip entry.");
+        Assert(!asset.IsAvailable, "Asset should be unavailable when zip is missing.");
+    }
+    finally
+    {
+        DeleteTempDirectory(root);
+    }
 }
 
 static void OldSaveWorldTimeNormalizes()
@@ -668,5 +770,31 @@ static void AssertEqual<T>(T expected, T actual, string message)
     if (!EqualityComparer<T>.Default.Equals(expected, actual))
     {
         throw new InvalidOperationException($"{message} Expected '{expected}', got '{actual}'.");
+    }
+}
+
+static string CreateTempDirectory()
+{
+    var directory = Path.Combine(Path.GetTempPath(), "DuskVillageTests", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    return directory;
+}
+
+static void DeleteTempDirectory(string directory)
+{
+    if (Directory.Exists(directory))
+    {
+        Directory.Delete(directory, recursive: true);
+    }
+}
+
+static void CreateZipWithEntries(string zipPath, params string[] entries)
+{
+    using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create);
+    foreach (var entryPath in entries)
+    {
+        var entry = archive.CreateEntry(entryPath);
+        using var stream = entry.Open();
+        stream.Write([0, 1, 2, 3]);
     }
 }

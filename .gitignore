@@ -11,6 +11,12 @@ DuskVillage/Content/**
 !DuskVillage/Content/Content.mgcb
 !DuskVillage/Content/Fonts/
 !DuskVillage/Content/Fonts/*.spritefont
+
+# Known local Mana Seed packs used by runtime catalogs
+DuskVillage/Content/20.04c - Summer Forest 4.3.zip
+DuskVillage/Content/20.05c - Spring Forest 4.3.zip
+DuskVillage/Content/20.06a - Autumn Forest 4.3.zip
+DuskVillage/Content/20.07a - Winter Forest 4.3.zip
 DuskVillage/Content/22.10a - Mana Seed Farmer Sprite System v1.6.zip
 
 # Visual Studio / Rider / VS Code local state

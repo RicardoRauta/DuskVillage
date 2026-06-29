@@ -69,6 +69,17 @@ DuskVillage/Content/22.10a - Mana Seed Farmer Sprite System v1.6.zip
 
 The game can still run without this zip. When it is missing, the character preview uses a simple fallback placeholder instead of the Mana Seed sprites.
 
+Seasonal world visuals are prepared through local Mana Seed forest packs. To enable the real seasonal map tiles later, place these zips in `DuskVillage/Content/`:
+
+```text
+DuskVillage/Content/20.05c - Spring Forest 4.3.zip
+DuskVillage/Content/20.04c - Summer Forest 4.3.zip
+DuskVillage/Content/20.06a - Autumn Forest 4.3.zip
+DuskVillage/Content/20.07a - Winter Forest 4.3.zip
+```
+
+The game code can still run without these zips. Missing seasonal world assets use fallback textures.
+
 ## Documentation
 
 - [Game Design Document](docs/GDD.md)
@@ -78,6 +89,7 @@ The game can still run without this zip. When it is missing, the character previ
 - [Character Presets](docs/CHARACTER_PRESETS.md)
 - [Character Animation](docs/CHARACTER_ANIMATION.md)
 - [Actions](docs/ACTIONS.md)
+- [World Assets](docs/WORLD_ASSETS.md)
 - [Runtime State](docs/RUNTIME_STATE.md)
 - [Needs Simulation](docs/NEEDS_SIMULATION.md)
 
