@@ -22,6 +22,8 @@ location
 
 `characterPreset` remains embedded so the save keeps the character identity and appearance used by the player. `needs` is stored separately from `characterPreset.needs` because live gameplay should modify runtime needs without changing the exported preset.
 
+Runtime needs are updated by the pure `DuskVillage.Needs` module. The save only stores the current values.
+
 `location` is intentionally simple for now:
 
 ```text

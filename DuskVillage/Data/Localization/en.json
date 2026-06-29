@@ -141,6 +141,9 @@
   "gameplay.time_advanced": "Time advanced.",
   "gameplay.forced_day_end": "You stayed awake too late and woke up the next morning.",
   "gameplay.slept": "You slept until morning.",
+  "gameplay.needs_hungry": "Time passed, and hunger is starting to weigh on you.",
+  "gameplay.needs_starving": "You are starving. Health is beginning to suffer.",
+  "gameplay.needs_exhausted": "You are exhausted. Pushing further is dangerous.",
   "gameplay.save": "Save Game",
   "gameplay.saved": "Saved to slot {0}.",
   "gameplay.return_menu": "Return to Main Menu"

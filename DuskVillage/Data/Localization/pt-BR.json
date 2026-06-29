@@ -141,6 +141,9 @@
   "gameplay.time_advanced": "Tempo avançado.",
   "gameplay.forced_day_end": "Você ficou acordado tarde demais e acordou na manhã seguinte.",
   "gameplay.slept": "Você dormiu até a manhã.",
+  "gameplay.needs_hungry": "O tempo passou, e a fome começa a pesar.",
+  "gameplay.needs_starving": "Você está faminto. A saúde começa a sofrer.",
+  "gameplay.needs_exhausted": "Você está exausto. Continuar se forçando é perigoso.",
   "gameplay.save": "Salvar Jogo",
   "gameplay.saved": "Salvo no slot {0}.",
   "gameplay.return_menu": "Voltar ao Menu Principal"

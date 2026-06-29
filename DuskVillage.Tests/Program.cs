@@ -1,5 +1,6 @@
 using DuskVillage.CharacterAssets;
 using DuskVillage.Characters;
+using DuskVillage.Needs;
 using DuskVillage.Players;
 using DuskVillage.Saving;
 using DuskVillage.World;
@@ -20,6 +21,9 @@ var tests = new (string Name, Action Run)[]
     ("World calendar rolls season and year", WorldCalendarRollsSeasonAndYear),
     ("Player runtime starts from preset needs", PlayerRuntimeStartsFromPresetNeeds),
     ("Old save player runtime normalizes", OldSavePlayerRuntimeNormalizes),
+    ("Needs elapsed time changes runtime needs", NeedsElapsedTimeChangesRuntimeNeeds),
+    ("Needs low hunger affects mood and health", NeedsLowHungerAffectsMoodAndHealth),
+    ("Needs sleep restores energy", NeedsSleepRestoresEnergy),
     ("Old save world time normalizes", OldSaveWorldTimeNormalizes),
     ("Save game round-trips character preset", SaveGameRoundTripsCharacterPreset)
 };
@@ -280,6 +284,75 @@ static void OldSavePlayerRuntimeNormalizes()
     AssertEqual(77, loaded.PlayerState.Needs.Hunger, "Missing runtime hunger should be copied from preset needs.");
     AssertEqual(0, loaded.PlayerState.Money, "Missing money should default to zero.");
     AssertEqual(PlayerRuntimeFactory.DefaultAreaId, loaded.PlayerState.Location.AreaId, "Missing location should default.");
+}
+
+static void NeedsElapsedTimeChangesRuntimeNeeds()
+{
+    var needs = new CharacterNeedsBlock
+    {
+        Energy = 80,
+        MaxEnergy = 100,
+        Hunger = 90,
+        MaxHunger = 100,
+        Health = 100,
+        MaxHealth = 100,
+        Mood = 75,
+        MaxMood = 100
+    };
+
+    var result = NeedsSystem.ApplyElapsedTime(needs, 60);
+
+    AssertEqual(80, needs.Energy, "Elapsed time should not mutate the original needs block.");
+    AssertEqual(90, needs.Hunger, "Elapsed time should not mutate original hunger.");
+    AssertEqual(78, result.Needs.Energy, "Elapsed time should reduce energy.");
+    AssertEqual(87, result.Needs.Hunger, "Elapsed time should reduce hunger.");
+    Assert(result.EnergyChanged, "Elapsed time result should report energy change.");
+    Assert(result.HungerChanged, "Elapsed time result should report hunger change.");
+}
+
+static void NeedsLowHungerAffectsMoodAndHealth()
+{
+    var lowHunger = new CharacterNeedsBlock
+    {
+        Energy = 30,
+        MaxEnergy = 100,
+        Hunger = 2,
+        MaxHunger = 100,
+        Health = 50,
+        MaxHealth = 100,
+        Mood = 40,
+        MaxMood = 100
+    };
+
+    var starving = NeedsSystem.ApplyElapsedTime(lowHunger, 60);
+
+    Assert(starving.IsHungry, "Low hunger should be flagged.");
+    Assert(starving.IsStarving, "Zero hunger should be flagged as starving.");
+    AssertEqual(0, starving.Needs.Hunger, "Hunger should clamp at zero.");
+    AssertEqual(47, starving.Needs.Health, "Starving should reduce health.");
+    AssertEqual(38, starving.Needs.Mood, "Low hunger should reduce mood.");
+}
+
+static void NeedsSleepRestoresEnergy()
+{
+    var tired = new CharacterNeedsBlock
+    {
+        Energy = 12,
+        MaxEnergy = 90,
+        Hunger = 70,
+        MaxHunger = 100,
+        Health = 80,
+        MaxHealth = 100,
+        Mood = 50,
+        MaxMood = 100
+    };
+
+    var slept = NeedsSystem.ApplySleep(tired);
+
+    AssertEqual(90, slept.Needs.Energy, "Sleep should restore energy to max.");
+    AssertEqual(62, slept.Needs.Hunger, "Sleep should consume hunger.");
+    AssertEqual(84, slept.Needs.Health, "Sleep should recover health if hunger is not low.");
+    AssertEqual(56, slept.Needs.Mood, "Sleep should recover mood.");
 }
 
 static void SaveGameRoundTripsCharacterPreset()

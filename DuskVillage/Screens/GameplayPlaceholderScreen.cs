@@ -1,6 +1,7 @@
 using System;
 using DuskVillage.Characters;
 using DuskVillage.Core;
+using DuskVillage.Needs;
 using DuskVillage.Saving;
 using DuskVillage.UI;
 using DuskVillage.World;
@@ -89,15 +90,25 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private void AdvanceOneHour()
     {
-        var result = WorldClock.Advance(_session.WorldTime, 60);
-        _session.WorldTime = result.Time;
-        ShowMessage(result.ForcedDayEnd ? T("gameplay.forced_day_end") : T("gameplay.time_advanced"));
+        var clockResult = WorldClock.Advance(_session.WorldTime, 60);
+        _session.WorldTime = clockResult.Time;
+
+        var needsResult = NeedsSystem.ApplyElapsedTime(_session.PlayerState.Needs, 60);
+        if (clockResult.ForcedDayEnd)
+        {
+            needsResult = NeedsSystem.ApplySleep(needsResult.Needs);
+        }
+
+        _session.PlayerState.Needs = needsResult.Needs;
+        ShowMessage(NeedsMessage(clockResult.ForcedDayEnd, needsResult));
     }
 
     private void SleepToNextDay()
     {
-        var result = WorldClock.SleepToNextDay(_session.WorldTime);
-        _session.WorldTime = result.Time;
+        var clockResult = WorldClock.SleepToNextDay(_session.WorldTime);
+        var needsResult = NeedsSystem.ApplySleep(_session.PlayerState.Needs);
+        _session.WorldTime = clockResult.Time;
+        _session.PlayerState.Needs = needsResult.Needs;
         ShowMessage(T("gameplay.slept"));
     }
 
@@ -147,6 +158,31 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     {
         _savedMessage = message;
         _savedMessageTimer = 2.5;
+    }
+
+    private string NeedsMessage(bool forcedDayEnd, NeedsSimulationResult result)
+    {
+        if (forcedDayEnd)
+        {
+            return T("gameplay.forced_day_end");
+        }
+
+        if (result.IsStarving)
+        {
+            return T("gameplay.needs_starving");
+        }
+
+        if (result.IsExhausted)
+        {
+            return T("gameplay.needs_exhausted");
+        }
+
+        if (result.IsHungry)
+        {
+            return T("gameplay.needs_hungry");
+        }
+
+        return T("gameplay.time_advanced");
     }
 
     private static string FullName(CharacterPreset preset)
