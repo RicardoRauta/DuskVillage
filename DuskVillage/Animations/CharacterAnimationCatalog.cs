@@ -44,24 +44,24 @@ public static class CharacterAnimationCatalog
             CharacterAnimationIds.Walk,
             CharacterFacingDirection.Down,
             true,
-            Frame(48, 80),
-            Frame(49, 55),
-            Frame(51, 115),
-            Frame(48, 80, flipX: true),
-            Frame(49, 55, flipX: true),
-            Frame(51, 115, flipX: true));
+            Frame(48, 105),
+            Frame(49, 105),
+            Frame(50, 105),
+            Frame(48, 105, flipX: true),
+            Frame(49, 105, flipX: true),
+            Frame(50, 105, flipX: true));
 
         Add(
             clips,
             CharacterAnimationIds.Walk,
             CharacterFacingDirection.Up,
             true,
-            Frame(52, 80),
-            Frame(53, 55),
-            Frame(54, 115),
-            Frame(52, 80, flipX: true),
-            Frame(53, 55, flipX: true),
-            Frame(54, 115, flipX: true));
+            Frame(52, 105),
+            Frame(53, 105),
+            Frame(54, 105),
+            Frame(52, 105, flipX: true),
+            Frame(53, 105, flipX: true),
+            Frame(54, 105, flipX: true));
 
         Add(
             clips,
@@ -70,10 +70,10 @@ public static class CharacterAnimationCatalog
             true,
             Frame(64, 145),
             Frame(65, 55),
-            Frame(66, 115),
+            Frame(66, 105),
             Frame(67, 165),
             Frame(68, 55),
-            Frame(69, 115));
+            Frame(69, 105));
 
         Add(
             clips,
@@ -82,10 +82,10 @@ public static class CharacterAnimationCatalog
             true,
             Frame(64, 145, flipX: true),
             Frame(65, 55, flipX: true),
-            Frame(66, 115, flipX: true),
+            Frame(66, 105, flipX: true),
             Frame(67, 165, flipX: true),
             Frame(68, 55, flipX: true),
-            Frame(69, 115, flipX: true));
+            Frame(69, 105, flipX: true));
 
         return clips;
     }

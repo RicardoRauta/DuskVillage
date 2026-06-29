@@ -34,12 +34,12 @@ The purple number in the guide is the cell index. The yellow number is the sugge
 Example down-walk sequence:
 
 ```text
-048 080
-049 055
-051 115
-048 080 flipX
-049 055 flipX
-051 115 flipX
+048 105
+049 105
+050 105
+048 105 flipX
+049 105 flipX
+050 105 flipX
 ```
 
 ## MVP Clips

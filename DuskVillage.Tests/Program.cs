@@ -362,15 +362,25 @@ static void NeedsSleepRestoresEnergy()
 static void CharacterWalkGuideUsesFlipAndDurations()
 {
     var clip = CharacterAnimationCatalog.GetClip(CharacterAnimationIds.Walk, CharacterFacingDirection.Down);
+    var sideClip = CharacterAnimationCatalog.GetClip(CharacterAnimationIds.Walk, CharacterFacingDirection.Right);
+    var leftClip = CharacterAnimationCatalog.GetClip(CharacterAnimationIds.Walk, CharacterFacingDirection.Left);
 
     AssertEqual(6, clip.Frames.Count, "Down walk should use the six guide frames.");
     AssertEqual(48, clip.Frames[0].CellIndex, "First down walk frame should use cell 048.");
-    AssertEqual(80, clip.Frames[0].DurationMilliseconds, "First down walk frame should use guide duration 080.");
+    AssertEqual(105, clip.Frames[0].DurationMilliseconds, "First down walk frame should use guide duration 105.");
     AssertEqual(49, clip.Frames[1].CellIndex, "Second down walk frame should use cell 049.");
-    AssertEqual(55, clip.Frames[1].DurationMilliseconds, "Second down walk frame should use guide duration 055.");
-    AssertEqual(51, clip.Frames[2].CellIndex, "Third down walk frame should use cell 051.");
-    AssertEqual(115, clip.Frames[2].DurationMilliseconds, "Third down walk frame should use guide duration 115.");
+    AssertEqual(105, clip.Frames[1].DurationMilliseconds, "Second down walk frame should use guide duration 105.");
+    AssertEqual(50, clip.Frames[2].CellIndex, "Third down walk frame should use cell 050.");
+    AssertEqual(105, clip.Frames[2].DurationMilliseconds, "Third down walk frame should use guide duration 105.");
     Assert(clip.Frames[3].FlipX, "Guide reverse marker should become flipX on repeated down walk frames.");
+
+    AssertEqual(64, sideClip.Frames[0].CellIndex, "First side walk frame should use cell 064.");
+    AssertEqual(145, sideClip.Frames[0].DurationMilliseconds, "First side walk frame should use guide duration 145.");
+    AssertEqual(66, sideClip.Frames[2].CellIndex, "Third side walk frame should use cell 066.");
+    AssertEqual(105, sideClip.Frames[2].DurationMilliseconds, "Third side walk frame should use guide duration 105.");
+    AssertEqual(69, sideClip.Frames[5].CellIndex, "Last side walk frame should use cell 069.");
+    AssertEqual(105, sideClip.Frames[5].DurationMilliseconds, "Last side walk frame should use guide duration 105.");
+    Assert(leftClip.Frames.All(frame => frame.FlipX), "Left walk should reuse right-facing cells with flipX.");
 }
 
 static void CharacterAnimationTimelineHonorsVariableDurations()
@@ -380,14 +390,14 @@ static void CharacterAnimationTimelineHonorsVariableDurations()
 
     AssertEqual(48, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Walk should start on first frame.");
 
-    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(79));
-    AssertEqual(48, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 048 should last through 79ms.");
+    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(104));
+    AssertEqual(48, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 048 should last through 104ms.");
 
     CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(1));
-    AssertEqual(49, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 049 should start at 80ms.");
+    AssertEqual(49, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 049 should start at 105ms.");
 
-    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(55));
-    AssertEqual(51, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 051 should start after the 055ms middle frame.");
+    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(105));
+    AssertEqual(50, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 050 should start after the second 105ms frame.");
 }
 
 static void CharacterAnimationCellCoordinatesAreStable()
