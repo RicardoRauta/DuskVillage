@@ -2,6 +2,7 @@ using DuskVillage.Actions;
 using DuskVillage.CharacterAssets;
 using DuskVillage.Core;
 using DuskVillage.Input;
+using DuskVillage.Items;
 using DuskVillage.Localization;
 using DuskVillage.Rendering;
 using DuskVillage.Saving;
@@ -27,6 +28,7 @@ namespace DuskVillage
         private FileSaveSlotProvider _saveSlots;
         private FileCharacterPresetStorage _characterPresetStorage;
         private GameActionRegistry _actionRegistry;
+        private ItemDefinitionRegistry _itemRegistry;
         private SeasonalWorldAssetCatalog _worldAssetCatalog;
         private SeasonalWorldTextureProvider _seasonalWorldTextureProvider;
         private ManaSeedCharacterAssetCatalog _characterAssetCatalog;
@@ -73,6 +75,7 @@ namespace DuskVillage
             _saveSlots = new FileSaveSlotProvider(GameDirectories.SavesDirectory);
             _characterPresetStorage = new FileCharacterPresetStorage(GameDirectories.CharacterPresetsDirectory);
             _actionRegistry = GameActionRegistry.LoadFromDirectories(GameDirectories.ActionDefinitionsDirectory);
+            _itemRegistry = ItemDefinitionRegistry.LoadFromDirectories(GameDirectories.ItemDefinitionsDirectory);
             _worldAssetCatalog = SeasonalWorldAssetCatalog.LoadFromDirectory(GameDirectories.WorldAssetDefinitionsDirectory);
             _seasonalWorldTextureProvider = new SeasonalWorldTextureProvider(GraphicsDevice);
             _characterAssetCatalog = ManaSeedCharacterAssetCatalog.Load(GameDirectories.ManaSeedFarmerSpriteZipPath);
@@ -93,6 +96,7 @@ namespace DuskVillage
                 _saveSlots,
                 _characterPresetStorage,
                 _actionRegistry,
+                _itemRegistry,
                 _worldAssetCatalog,
                 _seasonalWorldTextureProvider,
                 _characterAssetCatalog,

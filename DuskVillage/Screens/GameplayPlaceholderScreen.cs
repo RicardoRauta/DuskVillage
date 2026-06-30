@@ -4,7 +4,9 @@ using DuskVillage.Actions;
 using DuskVillage.Animations;
 using DuskVillage.Characters;
 using DuskVillage.Core;
+using DuskVillage.Inventory;
 using DuskVillage.Input;
+using DuskVillage.Items;
 using DuskVillage.Needs;
 using DuskVillage.Players;
 using DuskVillage.Rendering;
@@ -38,6 +40,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     {
         _session = session;
         _session.WorldMap = WorldMapFactory.Normalize(_session.WorldMap);
+        _session.PlayerState = PlayerRuntimeFactory.Normalize(_session.PlayerState);
         NormalizePlayerLocation();
         SyncVisualPosition();
 
@@ -87,6 +90,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
         var layout = Layout();
         var target = TargetTile();
+        var hotbarBounds = HotbarBounds();
         var viewport = Context.WorldMapRenderer.Draw(
             draw,
             _session.WorldMap,
@@ -104,11 +108,12 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         draw.Border(layout.MenuPanel, draw.Theme.Border);
         DrawInfoPanel(draw, layout.InfoPanel, target);
         _menu.Draw(draw);
+        DrawHotbar(draw, hotbarBounds);
 
         if (_messageTimer > 0 && !string.IsNullOrWhiteSpace(_message))
         {
             var size = Context.Font.MeasureString(_message) * UiScale * 0.82f;
-            draw.Text(_message, new Vector2((Context.ViewBounds.Width - size.X) / 2f, Context.ViewBounds.Bottom - 58), draw.Theme.Accent, 0.82f);
+            draw.Text(_message, new Vector2((Context.ViewBounds.Width - size.X) / 2f, hotbarBounds.Y - 36), draw.Theme.Accent, 0.82f);
         }
 
         EndUi();
@@ -168,9 +173,10 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         }
 
         var input = Context.Input.Current;
+        HandleHotbarSelection(input);
         if (input.WasKeyPressed(Context.Settings.Current.Input.Interact) || input.WasButtonPressed(Context.Settings.Current.Input.ControllerConfirm))
         {
-            ExecuteMapAction("action_plant_seeds");
+            ExecuteSelectedItemAction();
         }
 
         if (input.WasKeyPressed(Keys.R) || input.WasButtonPressed(Buttons.X))
@@ -299,6 +305,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
             PositionText(_session.PlayerState.Location.GetPositionX()),
             PositionText(_session.PlayerState.Location.GetPositionY())), panel.X + 18, ref y, draw.Theme.Text, 0.72f);
         DrawLine(draw, T("world.map.target", target.X, target.Y), panel.X + 18, ref y, draw.Theme.MutedText, 0.72f);
+        DrawLine(draw, T("inventory.selected", SelectedHotbarLabel()), panel.X + 18, ref y, draw.Theme.MutedText, 0.68f);
 
         var tile = WorldMapRules.GetTile(_session.WorldMap, target.X, target.Y);
         if (tile != null)
@@ -307,6 +314,34 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         }
 
         DrawLine(draw, T("world.map.controls"), panel.X + 18, ref y, draw.Theme.MutedText, 0.66f);
+    }
+
+    private void DrawHotbar(UiDrawContext draw, Rectangle bounds)
+    {
+        var inventory = InventorySystem.Normalize(_session.PlayerState.Inventory, Context.Items);
+        var slotSize = bounds.Height;
+        var gap = Math.Max(4, (int)(6 * UiScale));
+        for (var i = 0; i < inventory.HotbarSize; i++)
+        {
+            var slotBounds = new Rectangle(bounds.X + i * (slotSize + gap), bounds.Y, slotSize, slotSize);
+            var selected = i == inventory.SelectedHotbarIndex;
+            draw.Fill(slotBounds, selected ? new Color(44, 48, 42, 236) : draw.Theme.Panel);
+            draw.Border(slotBounds, selected ? draw.Theme.Accent : draw.Theme.Border, selected ? 3 : 2);
+            draw.Text((i + 1).ToString(CultureInfo.InvariantCulture), new Vector2(slotBounds.X + 5, slotBounds.Y + 4), draw.Theme.MutedText, 0.48f);
+
+            if (i >= inventory.Slots.Count || inventory.Slots[i].IsEmpty)
+            {
+                draw.CenteredText("-", slotBounds, draw.Theme.MutedText, 0.76f);
+                continue;
+            }
+
+            var slot = inventory.Slots[i];
+            draw.CenteredText(ShortItemLabel(slot.ItemId), new Rectangle(slotBounds.X + 4, slotBounds.Y + 12, slotBounds.Width - 8, slotBounds.Height - 20), draw.Theme.Text, 0.5f);
+            if (slot.Quantity > 1)
+            {
+                draw.RightAlignedText(slot.Quantity.ToString(CultureInfo.InvariantCulture), slotBounds.Right - 5, slotBounds.Bottom - 18, draw.Theme.Accent, 0.52f);
+            }
+        }
     }
 
     private void DrawLine(UiDrawContext draw, string text, int x, ref int y, Color color, float scale = 1f)
@@ -334,6 +369,17 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         return new ScreenLayout(
             new Rectangle(bounds.X + margin, bounds.Y + margin, infoWidth, infoHeight),
             new Rectangle(bounds.Right - margin - menuWidth, bounds.Y + margin, menuWidth, menuHeight));
+    }
+
+    private Rectangle HotbarBounds()
+    {
+        var bounds = Context.ViewBounds;
+        var slotSize = Math.Clamp((int)(56 * UiScale), 44, 68);
+        var gap = Math.Max(4, (int)(6 * UiScale));
+        var inventory = InventorySystem.Normalize(_session.PlayerState.Inventory, Context.Items);
+        var width = inventory.HotbarSize * slotSize + (inventory.HotbarSize - 1) * gap;
+        var y = bounds.Bottom - Math.Max(14, (int)(18 * UiScale)) - slotSize;
+        return new Rectangle(bounds.X + (bounds.Width - width) / 2, y, width, slotSize);
     }
 
     private (int X, int Y) TargetTile()
@@ -462,6 +508,60 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
             (float)_session.PlayerState.Location.GetPositionY());
     }
 
+    private void HandleHotbarSelection(InputSnapshot input)
+    {
+        for (var i = 0; i < HotbarKeys.Length; i++)
+        {
+            if (input.WasKeyPressed(HotbarKeys[i]))
+            {
+                _session.PlayerState.Inventory = InventorySystem.SelectHotbarSlot(_session.PlayerState.Inventory, i, Context.Items);
+                return;
+            }
+        }
+    }
+
+    private void ExecuteSelectedItemAction()
+    {
+        var slot = InventorySystem.GetSelectedHotbarSlot(_session.PlayerState.Inventory, Context.Items);
+        if (slot.IsEmpty)
+        {
+            ShowMessage(T("inventory.no_selected_action"));
+            return;
+        }
+
+        if (slot.ItemId.Equals(ItemIds.StarterSeeds, StringComparison.OrdinalIgnoreCase))
+        {
+            ExecuteMapAction("action_plant_seeds");
+            return;
+        }
+
+        if (slot.ItemId.Equals(ItemIds.WateringCanBasic, StringComparison.OrdinalIgnoreCase))
+        {
+            ExecuteMapAction("action_water");
+            return;
+        }
+
+        ShowMessage(T("inventory.no_selected_action"));
+    }
+
+    private string SelectedHotbarLabel()
+    {
+        var slot = InventorySystem.GetSelectedHotbarSlot(_session.PlayerState.Inventory, Context.Items);
+        return slot.IsEmpty ? T("inventory.empty_slot") : ItemLabel(slot.ItemId);
+    }
+
+    private string ItemLabel(string itemId)
+    {
+        var definition = Context.Items.Find(itemId);
+        return definition == null ? itemId : T(definition.LabelKey);
+    }
+
+    private string ShortItemLabel(string itemId)
+    {
+        var label = ItemLabel(itemId);
+        return label.Length <= 10 ? label : label[..10];
+    }
+
     private bool IsActionAnimationActive()
     {
         return _actionAnimationTimer > 0;
@@ -503,4 +603,16 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     }
 
     private readonly record struct ScreenLayout(Rectangle InfoPanel, Rectangle MenuPanel);
+
+    private static readonly Keys[] HotbarKeys =
+    [
+        Keys.D1,
+        Keys.D2,
+        Keys.D3,
+        Keys.D4,
+        Keys.D5,
+        Keys.D6,
+        Keys.D7,
+        Keys.D8
+    ];
 }

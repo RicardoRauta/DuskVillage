@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using DuskVillage.Animations;
 using DuskVillage.Characters;
+using DuskVillage.Inventory;
 using DuskVillage.Needs;
 using DuskVillage.Players;
 using DuskVillage.World;
@@ -55,6 +56,16 @@ public static class GameActionSystem
         var startedNewDay = false;
         var forcedDayEnd = false;
         var appliedEffects = new List<GameActionAppliedEffect>();
+
+        if (!CanApplyInventoryEffects(definition.Effects, originalPlayerState))
+        {
+            return Failure(
+                originalWorldTime,
+                originalPlayerState,
+                request.FacingDirection,
+                "action.result.missing_item",
+                definition);
+        }
 
         if (definition.TimeCostMinutes > 0)
         {
@@ -113,6 +124,22 @@ public static class GameActionSystem
             return;
         }
 
+        if (effect.Type.Equals(GameActionEffectTypes.RequireItem, StringComparison.OrdinalIgnoreCase))
+        {
+            var quantity = RequiredItemQuantity(effect);
+            appliedEffects.Add(new GameActionAppliedEffect(effect.Type, effect.ItemId, quantity));
+            return;
+        }
+
+        if (effect.Type.Equals(GameActionEffectTypes.ConsumeItem, StringComparison.OrdinalIgnoreCase))
+        {
+            var quantity = RequiredItemQuantity(effect);
+            var result = InventorySystem.RemoveItem(playerState.Inventory, effect.ItemId, quantity);
+            playerState.Inventory = result.Inventory;
+            appliedEffects.Add(new GameActionAppliedEffect(effect.Type, effect.ItemId, -quantity));
+            return;
+        }
+
         if (effect.Type.Equals(GameActionEffectTypes.SleepToNextDay, StringComparison.OrdinalIgnoreCase))
         {
             var clockResult = WorldClock.SleepToNextDay(worldTime);
@@ -123,6 +150,43 @@ public static class GameActionSystem
             forcedDayEnd = forcedDayEnd || clockResult.ForcedDayEnd;
             appliedEffects.Add(new GameActionAppliedEffect(effect.Type, string.Empty, 0));
         }
+    }
+
+    private static bool CanApplyInventoryEffects(IEnumerable<GameActionEffectDefinition> effects, PlayerRuntimeState playerState)
+    {
+        var requiredByItem = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var effect in effects)
+        {
+            if (!effect.Type.Equals(GameActionEffectTypes.RequireItem, StringComparison.OrdinalIgnoreCase) &&
+                !effect.Type.Equals(GameActionEffectTypes.ConsumeItem, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var itemId = effect.ItemId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(itemId))
+            {
+                return false;
+            }
+
+            requiredByItem.TryGetValue(itemId, out var current);
+            requiredByItem[itemId] = current + RequiredItemQuantity(effect);
+        }
+
+        foreach (var required in requiredByItem)
+        {
+            if (!InventorySystem.HasItem(playerState.Inventory, required.Key, required.Value))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static int RequiredItemQuantity(GameActionEffectDefinition effect)
+    {
+        return Math.Max(1, effect.Amount);
     }
 
     private static void ApplyNeedChange(CharacterNeedsBlock needs, string needId, int amount)

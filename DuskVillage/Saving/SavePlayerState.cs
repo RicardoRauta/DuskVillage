@@ -19,7 +19,8 @@ public sealed class SavePlayerState : PlayerRuntimeState
             CharacterPreset = normalized.CharacterPreset,
             Needs = normalized.Needs,
             Money = normalized.Money,
-            Location = normalized.Location
+            Location = normalized.Location,
+            Inventory = normalized.Inventory
         };
     }
 
@@ -31,5 +32,6 @@ public sealed class SavePlayerState : PlayerRuntimeState
         Needs = normalized.Needs;
         Money = normalized.Money;
         Location = normalized.Location;
+        Inventory = normalized.Inventory;
     }
 }

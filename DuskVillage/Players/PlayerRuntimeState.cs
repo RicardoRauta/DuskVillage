@@ -1,4 +1,5 @@
 using DuskVillage.Characters;
+using DuskVillage.Inventory;
 
 namespace DuskVillage.Players;
 
@@ -13,4 +14,6 @@ public class PlayerRuntimeState
     public int Money { get; set; }
 
     public PlayerLocationState Location { get; set; }
+
+    public InventoryState Inventory { get; set; }
 }

@@ -264,7 +264,23 @@ public sealed class GameActionPreviewScreen : GameScreenBase
             return T("action.effect.setTileState");
         }
 
+        if (effect.Type.Equals(GameActionEffectTypes.RequireItem, StringComparison.OrdinalIgnoreCase))
+        {
+            return T("action.effect.requireItem", ItemLabel(effect.ItemId), Math.Max(1, effect.Amount));
+        }
+
+        if (effect.Type.Equals(GameActionEffectTypes.ConsumeItem, StringComparison.OrdinalIgnoreCase))
+        {
+            return T("action.effect.consumeItem", ItemLabel(effect.ItemId), Math.Max(1, effect.Amount));
+        }
+
         return T("action.effect." + effect.Type);
+    }
+
+    private string ItemLabel(string itemId)
+    {
+        var definition = Context.Items.Find(itemId);
+        return definition == null ? itemId : T(definition.LabelKey);
     }
 
     private static IReadOnlyList<SelectorOption> BuildActionOptions(GameActionRegistry registry)

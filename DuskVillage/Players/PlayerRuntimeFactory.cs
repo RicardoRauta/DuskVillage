@@ -1,5 +1,6 @@
 using System;
 using DuskVillage.Characters;
+using DuskVillage.Inventory;
 using DuskVillage.Needs;
 using DuskVillage.WorldMap;
 
@@ -19,7 +20,8 @@ public static class PlayerRuntimeFactory
             CharacterPreset = characterPreset,
             Needs = characterPreset.Needs.Clone(),
             Money = 0,
-            Location = CreateDefaultLocation()
+            Location = CreateDefaultLocation(),
+            Inventory = InventorySystem.CreateStarterInventory()
         });
     }
 
@@ -32,7 +34,8 @@ public static class PlayerRuntimeFactory
             CharacterPreset = ClonePreset(normalized.CharacterPreset),
             Needs = normalized.Needs.Clone(),
             Money = normalized.Money,
-            Location = normalized.Location.Clone()
+            Location = normalized.Location.Clone(),
+            Inventory = normalized.Inventory.Clone()
         };
     }
 
@@ -44,6 +47,9 @@ public static class PlayerRuntimeFactory
         state.Needs = NeedsSystem.Normalize(state.Needs ?? state.CharacterPreset.Needs.Clone());
         state.Money = Math.Max(0, state.Money);
         state.Location = NormalizeLocation(state.Location);
+        state.Inventory = state.Inventory == null
+            ? InventorySystem.CreateStarterInventory()
+            : InventorySystem.Normalize(state.Inventory);
         return state;
     }
 

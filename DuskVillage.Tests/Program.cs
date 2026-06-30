@@ -3,6 +3,8 @@ using DuskVillage.Actions;
 using DuskVillage.CharacterAssets;
 using DuskVillage.Characters;
 using DuskVillage.Core;
+using DuskVillage.Inventory;
+using DuskVillage.Items;
 using DuskVillage.Needs;
 using DuskVillage.Players;
 using DuskVillage.Saving;
@@ -36,6 +38,7 @@ var tests = new (string Name, Action Run)[]
     ("World map target resolver uses fractional position", WorldMapTargetResolverUsesFractionalPosition),
     ("World map actions change tile state", WorldMapActionsChangeTileState),
     ("World map action rejects invalid tile", WorldMapActionRejectsInvalidTile),
+    ("Inventory stacks and removes items", InventoryStacksAndRemovesItems),
     ("Player runtime starts from preset needs", PlayerRuntimeStartsFromPresetNeeds),
     ("Old save player runtime normalizes", OldSavePlayerRuntimeNormalizes),
     ("Needs elapsed time changes runtime needs", NeedsElapsedTimeChangesRuntimeNeeds),
@@ -51,6 +54,8 @@ var tests = new (string Name, Action Run)[]
     ("Action registry validates definitions", ActionRegistryValidatesDefinitions),
     ("Action execution applies effects and time", ActionExecutionAppliesEffectsAndTime),
     ("Action execution rejects invalid target", ActionExecutionRejectsInvalidTarget),
+    ("Action execution consumes inventory items", ActionExecutionConsumesInventoryItems),
+    ("Action execution rejects missing inventory item", ActionExecutionRejectsMissingInventoryItem),
     ("Action sleep advances to next day", ActionSleepAdvancesToNextDay),
     ("Old save world time normalizes", OldSaveWorldTimeNormalizes),
     ("Save game round-trips character preset", SaveGameRoundTripsCharacterPreset)
@@ -480,6 +485,7 @@ static void WorldMapActionsChangeTileState()
     AssertEqual(WorldMapTileStateIds.Empty, WorldMapRules.GetTile(map, 4, 5).StateId, "Planting should not mutate original map.");
     AssertEqual("06:10", plant.ActionResult.WorldTime.CurrentTime, "Planting should use action time cost.");
     AssertEqual(77, plant.ActionResult.PlayerState.Needs.Energy, "Planting should apply energy cost.");
+    AssertEqual(14, InventoryQuantity(plant.ActionResult.PlayerState.Inventory, ItemIds.StarterSeeds), "Planting should consume one seed.");
 
     var water = WorldMapActionSystem.Execute(
         registry,
@@ -498,6 +504,7 @@ static void WorldMapActionsChangeTileState()
     AssertEqual(WorldMapTileStateIds.Watered, WorldMapRules.GetTile(water.MapState, 4, 5).StateId, "Watering should update tile state.");
     AssertEqual("06:20", water.ActionResult.WorldTime.CurrentTime, "Watering should use action time cost.");
     AssertEqual(73, water.ActionResult.PlayerState.Needs.Energy, "Watering should apply energy cost.");
+    AssertEqual(1, InventoryQuantity(water.ActionResult.PlayerState.Inventory, ItemIds.WateringCanBasic), "Watering should require but not consume the watering can.");
 }
 
 static void WorldMapActionRejectsInvalidTile()
@@ -524,6 +531,24 @@ static void WorldMapActionRejectsInvalidTile()
     AssertEqual("world.map.not_plantable", result.MessageKey, "Invalid plant target should explain the failure.");
     AssertEqual("06:00", result.ActionResult.WorldTime.CurrentTime, "Invalid target should not spend time.");
     AssertEqual(80, result.ActionResult.PlayerState.Needs.Energy, "Invalid target should not spend energy.");
+}
+
+static void InventoryStacksAndRemovesItems()
+{
+    var items = CreateTestItemRegistry();
+    var inventory = InventorySystem.CreateDefault();
+
+    var added = InventorySystem.AddItem(inventory, ItemIds.StarterSeeds, 120, items);
+    Assert(added.Succeeded, "Adding seeds should succeed.");
+    AssertEqual(120, InventoryQuantity(added.Inventory, ItemIds.StarterSeeds), "Inventory should keep the full seed quantity.");
+    Assert(added.Inventory.Slots.Count(slot => !slot.IsEmpty && slot.ItemId == ItemIds.StarterSeeds) > 1, "Seed overflow should use a second stack.");
+
+    var removed = InventorySystem.RemoveItem(added.Inventory, ItemIds.StarterSeeds, 21, items);
+    Assert(removed.Succeeded, "Removing seeds should succeed.");
+    AssertEqual(99, InventoryQuantity(removed.Inventory, ItemIds.StarterSeeds), "Inventory should subtract removed quantity.");
+
+    var selected = InventorySystem.SelectHotbarSlot(removed.Inventory, 0, items);
+    AssertEqual(ItemIds.StarterSeeds, InventorySystem.GetSelectedHotbarSlot(selected, items).ItemId, "Hotbar selection should expose selected slot.");
 }
 
 static void OldSaveWorldTimeNormalizes()
@@ -881,6 +906,56 @@ static void ActionExecutionRejectsInvalidTarget()
     AssertEqual("action.result.invalid_target", result.MessageKey, "Invalid target should return a clear message key.");
 }
 
+static void ActionExecutionConsumesInventoryItems()
+{
+    var registry = CreateTestActionRegistry();
+    var player = PlayerRuntimeFactory.CreateNew(CharacterPresetFactory.CreateDefault());
+    player.Needs.Energy = 80;
+
+    var result = GameActionSystem.Execute(
+        registry,
+        new GameActionRequest
+        {
+            ActionId = "test_plant",
+            ActorEntityId = player.EntityId,
+            FacingDirection = CharacterFacingDirection.Down,
+            Target = GameActionTarget.Tile(WorldMapFactory.DefaultAreaId, 4, 5)
+        },
+        WorldClock.CreateDefault(),
+        player);
+
+    Assert(result.Succeeded, "Plant action should succeed while seeds are present.");
+    AssertEqual(14, InventoryQuantity(result.PlayerState.Inventory, ItemIds.StarterSeeds), "Plant action should consume one seed.");
+    AssertEqual(77, result.PlayerState.Needs.Energy, "Plant action should still apply non-inventory effects.");
+    AssertEqual("06:10", result.WorldTime.CurrentTime, "Plant action should spend time after item validation succeeds.");
+}
+
+static void ActionExecutionRejectsMissingInventoryItem()
+{
+    var registry = CreateTestActionRegistry();
+    var player = PlayerRuntimeFactory.CreateNew(CharacterPresetFactory.CreateDefault());
+    player.Inventory = InventorySystem.CreateDefault();
+    player.Needs.Energy = 80;
+
+    var result = GameActionSystem.Execute(
+        registry,
+        new GameActionRequest
+        {
+            ActionId = "test_plant",
+            ActorEntityId = player.EntityId,
+            FacingDirection = CharacterFacingDirection.Down,
+            Target = GameActionTarget.Tile(WorldMapFactory.DefaultAreaId, 4, 5)
+        },
+        WorldClock.CreateDefault(),
+        player);
+
+    Assert(!result.Succeeded, "Plant action should fail without seeds.");
+    AssertEqual("action.result.missing_item", result.MessageKey, "Missing item should return a clear message key.");
+    AssertEqual(0, InventoryQuantity(result.PlayerState.Inventory, ItemIds.StarterSeeds), "Failed action should not create or consume seeds.");
+    AssertEqual(80, result.PlayerState.Needs.Energy, "Failed action should not spend energy.");
+    AssertEqual("06:00", result.WorldTime.CurrentTime, "Failed action should not spend time.");
+}
+
 static void ActionSleepAdvancesToNextDay()
 {
     var registry = CreateTestActionRegistry();
@@ -955,6 +1030,12 @@ static GameActionRegistry CreateTestActionRegistry()
             [
                 new GameActionEffectDefinition
                 {
+                    Type = GameActionEffectTypes.ConsumeItem,
+                    ItemId = ItemIds.StarterSeeds,
+                    Amount = 1
+                },
+                new GameActionEffectDefinition
+                {
                     Type = GameActionEffectTypes.PlantCrop,
                     CropId = WorldMapCropIds.StarterSeeds
                 },
@@ -975,6 +1056,12 @@ static GameActionRegistry CreateTestActionRegistry()
             TimeCostMinutes = 10,
             Effects =
             [
+                new GameActionEffectDefinition
+                {
+                    Type = GameActionEffectTypes.RequireItem,
+                    ItemId = ItemIds.WateringCanBasic,
+                    Amount = 1
+                },
                 new GameActionEffectDefinition
                 {
                     Type = GameActionEffectTypes.WaterTile
@@ -1022,6 +1109,8 @@ static void SaveGameRoundTripsCharacterPreset()
     saveGame.PlayerState.Needs.Hunger = 56;
     saveGame.PlayerState.Location.AreaId = "starter_farm";
     saveGame.PlayerState.Location.SetPosition(7.35, 8.75);
+    saveGame.PlayerState.Inventory = InventorySystem.SelectHotbarSlot(saveGame.PlayerState.Inventory, 1, CreateTestItemRegistry());
+    saveGame.PlayerState.Inventory = InventorySystem.RemoveItem(saveGame.PlayerState.Inventory, ItemIds.StarterSeeds, 3, CreateTestItemRegistry()).Inventory;
     saveGame.WorldState.Map = WorldMapFactory.CreateDefault();
     var savedTile = WorldMapRules.GetTile(saveGame.WorldState.Map, 4, 5);
     savedTile.StateId = WorldMapTileStateIds.Watered;
@@ -1045,6 +1134,9 @@ static void SaveGameRoundTripsCharacterPreset()
     AssertEqual(8, loaded.PlayerState.Location.TileY, "Save should keep runtime tile Y.");
     AssertApprox(7.35, loaded.PlayerState.Location.GetPositionX(), 0.001, "Save should keep fractional runtime X position.");
     AssertApprox(8.75, loaded.PlayerState.Location.GetPositionY(), 0.001, "Save should keep fractional runtime Y position.");
+    AssertEqual(12, InventoryQuantity(loaded.PlayerState.Inventory, ItemIds.StarterSeeds), "Save should keep inventory seed quantity.");
+    AssertEqual(1, InventoryQuantity(loaded.PlayerState.Inventory, ItemIds.WateringCanBasic), "Save should keep inventory tool quantity.");
+    AssertEqual(1, loaded.PlayerState.Inventory.SelectedHotbarIndex, "Save should keep selected hotbar slot.");
     AssertEqual(WorldMapTileStateIds.Watered, WorldMapRules.GetTile(loaded.WorldState.Map, 4, 5).StateId, "Save should keep map tile state.");
     AssertEqual(WorldMapCropIds.StarterSeeds, WorldMapRules.GetTile(loaded.WorldState.Map, 4, 5).CropId, "Save should keep map crop id.");
 }
@@ -1071,6 +1163,32 @@ static void AssertApprox(double expected, double actual, double tolerance, strin
     {
         throw new InvalidOperationException($"{message} Expected '{expected}', got '{actual}'.");
     }
+}
+
+static ItemDefinitionRegistry CreateTestItemRegistry()
+{
+    return ItemDefinitionRegistry.FromDefinitions(
+    [
+        new ItemDefinition
+        {
+            Id = ItemIds.StarterSeeds,
+            LabelKey = "item.starter_seeds",
+            MaxStack = 99
+        },
+        new ItemDefinition
+        {
+            Id = ItemIds.WateringCanBasic,
+            LabelKey = "item.watering_can_basic",
+            MaxStack = 1
+        }
+    ]);
+}
+
+static int InventoryQuantity(InventoryState inventory, string itemId)
+{
+    return InventorySystem.Normalize(inventory, CreateTestItemRegistry()).Slots
+        .Where(slot => !slot.IsEmpty && slot.ItemId.Equals(itemId, StringComparison.OrdinalIgnoreCase))
+        .Sum(slot => slot.Quantity);
 }
 
 static string CreateTempDirectory()

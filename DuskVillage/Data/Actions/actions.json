@@ -39,6 +39,7 @@
     "successMessageKey": "action.result.planted_seeds",
     "tags": [ "farming", "tile" ],
     "effects": [
+      { "type": "consumeItem", "itemId": "starter_seeds", "amount": 1 },
       { "type": "plantCrop", "cropId": "starter_seeds" },
       { "type": "changeNeed", "needId": "energy", "amount": -3 },
       { "type": "changeNeed", "needId": "hunger", "amount": -1 }
@@ -54,6 +55,7 @@
     "successMessageKey": "action.result.watered",
     "tags": [ "farming", "tile" ],
     "effects": [
+      { "type": "requireItem", "itemId": "watering_can_basic", "amount": 1 },
       { "type": "waterTile" },
       { "type": "changeNeed", "needId": "energy", "amount": -4 },
       { "type": "changeNeed", "needId": "hunger", "amount": -1 }

@@ -54,6 +54,8 @@ setTileState
 
 The base `GameActionSystem` still handles actor state such as time, energy, hunger, money, and animation. `WorldMapActionSystem` handles tile validation and tile mutation after a valid action succeeds.
 
+Inventory requirements are validated by the base action system before map mutation. Planting currently consumes `starter_seeds x1`; watering requires `watering_can_basic x1` without consuming the tool.
+
 ## Save Data
 
 `SaveWorldState` now stores `Map`. Old saves without map data normalize to the default starter farm, so the save format remains backward-compatible for current development builds.

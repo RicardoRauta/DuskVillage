@@ -2,6 +2,7 @@ using System;
 using DuskVillage.Actions;
 using DuskVillage.CharacterAssets;
 using DuskVillage.Input;
+using DuskVillage.Items;
 using DuskVillage.Localization;
 using DuskVillage.Rendering;
 using DuskVillage.Saving;
@@ -26,6 +27,7 @@ public sealed class GameScreenContext
         ISaveSlotProvider saveSlots,
         ICharacterPresetStorage characterPresetStorage,
         GameActionRegistry actions,
+        ItemDefinitionRegistry items,
         SeasonalWorldAssetCatalog worldAssets,
         SeasonalWorldTextureProvider seasonalWorldTextures,
         ManaSeedCharacterAssetCatalog characterAssets,
@@ -46,7 +48,8 @@ public sealed class GameScreenContext
         Settings = settings;
         SaveSlots = saveSlots;
         CharacterPresetStorage = characterPresetStorage;
-        Actions = actions;
+        Actions = actions ?? GameActionRegistry.Empty;
+        Items = items ?? ItemDefinitionRegistry.Empty;
         WorldAssets = worldAssets;
         SeasonalWorldTextures = seasonalWorldTextures;
         CharacterAssets = characterAssets;
@@ -79,6 +82,8 @@ public sealed class GameScreenContext
     public ICharacterPresetStorage CharacterPresetStorage { get; }
 
     public GameActionRegistry Actions { get; }
+
+    public ItemDefinitionRegistry Items { get; }
 
     public SeasonalWorldAssetCatalog WorldAssets { get; }
 

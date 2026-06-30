@@ -11,14 +11,15 @@ This document tracks the current modular implementation order for Dusk Village. 
 5. Local world assets, seasonal asset catalog, and fallback rendering.
 6. Starter world map, tile state, planting/watering, and player location.
 7. Gameplay map presentation: full-screen camera, continuous player movement, and local asset organization.
+8. Inventory foundation: item definitions, item stacks, player inventory save data, hotbar selection, and item-gated farming actions.
 
 ## Next Recommended Topics
 
-1. Inventory foundation: item definitions, item stacks, player inventory save data, and a UI theme switch between traveler backpack and village role book.
-2. Tool and hotbar layer: equip tool, use selected action from hotbar, and draw hotkey text over inventory slot art.
-3. Crop growth: day transition processing, watered-day counters, harvest actions, and seed item consumption.
-4. Map objects: trees, rocks, forage, collision objects, and gather/chop/mining actions.
-5. First NPC module: NPC definitions, basic spawn positions, dialogue stub, and relationship save data.
+1. Inventory UI skinning: use the local backpack/book packs for the hotbar and inventory screen while keeping hotkey labels rendered by the game.
+2. Crop growth: day transition processing, watered-day counters, harvest actions, and seed item consumption.
+3. Map objects: trees, rocks, forage, collision objects, and gather/chop/mining actions.
+4. First NPC module: NPC definitions, basic spawn positions, dialogue stub, and relationship save data.
+5. Tool/equipment progression: tool definitions, equipped tool state, tool upgrades, and action requirements by tool tier.
 
 ## Modularity Rules
 

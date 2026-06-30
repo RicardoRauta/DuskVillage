@@ -1,0 +1,18 @@
+[
+  {
+    "id": "starter_seeds",
+    "labelKey": "item.starter_seeds",
+    "descriptionKey": "item.starter_seeds.description",
+    "category": "seed",
+    "maxStack": 99,
+    "tags": [ "seed", "farming" ]
+  },
+  {
+    "id": "watering_can_basic",
+    "labelKey": "item.watering_can_basic",
+    "descriptionKey": "item.watering_can_basic.description",
+    "category": "tool",
+    "maxStack": 1,
+    "tags": [ "tool", "watering", "farming" ]
+  }
+]

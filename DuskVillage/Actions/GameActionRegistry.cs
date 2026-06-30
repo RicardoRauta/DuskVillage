@@ -156,6 +156,13 @@ public sealed class GameActionRegistry
         {
             throw new InvalidDataException($"Action '{actionId}' has unknown need id '{effect.NeedId}'.");
         }
+
+        if ((effect.Type.Equals(GameActionEffectTypes.RequireItem, StringComparison.OrdinalIgnoreCase) ||
+            effect.Type.Equals(GameActionEffectTypes.ConsumeItem, StringComparison.OrdinalIgnoreCase)) &&
+            string.IsNullOrWhiteSpace(effect.ItemId))
+        {
+            throw new InvalidDataException($"Action '{actionId}' has an item effect without an item id.");
+        }
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()

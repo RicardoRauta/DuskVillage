@@ -49,6 +49,8 @@ Each action is a static definition:
   "successMessageKey": "action.result.watered",
   "tags": [ "farming", "tile" ],
   "effects": [
+    { "type": "requireItem", "itemId": "watering_can_basic", "amount": 1 },
+    { "type": "waterTile" },
     { "type": "changeNeed", "needId": "energy", "amount": -4 },
     { "type": "changeNeed", "needId": "hunger", "amount": -1 }
   ]
@@ -66,11 +68,22 @@ sleepToNextDay
 plantCrop
 waterTile
 setTileState
+requireItem
+consumeItem
 ```
 
 Actions advance the clock through `timeCostMinutes`. Need costs are explicit effects, so a short 10-minute action does not accidentally consume a full hour of hunger or energy.
 
-The base action executor applies actor/time effects. World tile effects are applied by `WorldMapActionSystem`, which composes action definitions with map validation and keeps the map module independent.
+The base action executor applies actor/time and inventory effects. World tile effects are applied by `WorldMapActionSystem`, which composes action definitions with map validation and keeps the map module independent.
+
+Inventory effects are validated before time, needs, or map state are changed:
+
+```text
+requireItem: action needs an item but does not consume it
+consumeItem: action removes item quantity after validation succeeds
+```
+
+The current farming examples use `consumeItem starter_seeds x1` for planting and `requireItem watering_can_basic x1` for watering.
 
 ## Mod Compatibility
 
@@ -84,6 +97,7 @@ runtime state stays in saves
 systems reference definitions by ID
 effects are whitelisted and validated
 UI does not hardcode action behavior
+inventory item IDs are stable data references
 ```
 
 ## Lua Support
