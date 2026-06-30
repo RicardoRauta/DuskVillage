@@ -80,13 +80,18 @@ If the zip is missing, the hotbar falls back to simple rectangles and text.
 The current Backpack skin uses:
 
 ```text
-BackPack idle frame
+BackPack idle frame as the open backpack background
+Inventory button frame for the hotbar backpack icon
 Inventory holder
 Inventory highlighter
+Inventory side tab
+Inventory paper tileset for the item description panel
 small item icons
 ```
 
-The pack also includes open/close pouch animations and inventory appear/disappear frames. Those animation folders were inspected and should drive the next inventory-screen topic; the first gameplay hotbar uses static frames so action readability stays stable.
+The open backpack screen is drawn by `DuskVillage.Rendering.InventoryHotbarRenderer`, not by the gameplay screen. It shows a smaller storage grid inside the backpack, keeps the gameplay hotbar in its normal bottom position, and uses mouse hit-testing from the same layout geometry that draws the visible slots. The gameplay screen only decides when the backpack is open and passes the current owner inventory into the renderer. This keeps presentation separate from player, NPC, chest, and future multiplayer inventory state.
+
+The pack also includes open/close pouch animations and inventory appear/disappear frames. Those animation folders were inspected and should drive the next presentation topic; the current gameplay inventory uses static frames so action readability stays stable while the layout is still evolving.
 
 ## Action Integration
 
@@ -141,7 +146,6 @@ Texture caches are client-side rendering data and should not be synchronized ove
 The next inventory-related topic should focus on presentation and item use depth:
 
 ```text
-add an inventory screen
 play backpack open/close and category appear/disappear animations
 add Adventure Book skin for village roles/jobs
 add item icons once icon catalogs are mapped

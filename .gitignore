@@ -53,6 +53,7 @@ Desktop.ini
 .DS_Store
 
 # Temporary files
+.codex-remote-attachments/
 *.tmp
 *.temp
 *.bak

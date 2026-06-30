@@ -24,6 +24,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     private const double PlayerMoveSpeedTilesPerSecond = 4.5;
     private const int TerrainTileSourceSize = 16;
     private const float PlayerFeetAnchorYInCell = 44f;
+    private const float GameplayHotbarScaleMultiplier = 1.45f;
 
     private readonly GameSessionSummary _session;
     private readonly VerticalMenu _menu = new();
@@ -34,6 +35,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     private double _actionAnimationTimer;
     private double _blockedMovementTimer;
     private bool _inventoryOpen;
+    private int _inventoryDetailSlotIndex = -1;
     private string _message = string.Empty;
 
     public GameplayPlaceholderScreen(GameScreenContext context, GameSessionSummary session)
@@ -61,6 +63,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     {
         if (_inventoryOpen)
         {
+            HandleInventoryMouseInput();
             if (InventoryRequested() || BackRequested())
             {
                 _inventoryOpen = false;
@@ -81,6 +84,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         if (InventoryRequested())
         {
             _inventoryOpen = true;
+            _inventoryDetailSlotIndex = InventorySystem.Normalize(_session.PlayerState.Inventory, Context.Items).SelectedHotbarIndex;
             return;
         }
 
@@ -341,7 +345,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private void DrawHotbar(UiDrawContext draw, Rectangle bounds)
     {
-        Context.InventoryHotbarRenderer.Draw(draw, _session.PlayerState.Inventory, Context.Items, bounds);
+        Context.InventoryHotbarRenderer.Draw(draw, _session.PlayerState.Inventory, Context.Items, bounds, scaleMultiplier: GameplayHotbarScaleMultiplier);
     }
 
     private void DrawLine(UiDrawContext draw, string text, int x, ref int y, Color color, float scale = 1f)
@@ -374,8 +378,9 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     private Rectangle HotbarBounds()
     {
         var bounds = Context.ViewBounds;
-        var slotSize = Context.InventoryHotbarRenderer.PreferredSlotSize(UiScale);
-        var gap = Context.InventoryHotbarRenderer.PreferredGap(UiScale);
+        var hotbarScale = UiScale * GameplayHotbarScaleMultiplier;
+        var slotSize = Context.InventoryHotbarRenderer.PreferredSlotSize(hotbarScale);
+        var gap = Context.InventoryHotbarRenderer.PreferredGap(hotbarScale);
         var inventory = InventorySystem.Normalize(_session.PlayerState.Inventory, Context.Items);
         var width = inventory.HotbarSize * slotSize.X + (inventory.HotbarSize - 1) * gap;
         var y = bounds.Bottom - Math.Max(14, (int)(18 * UiScale)) - slotSize.Y;
@@ -398,6 +403,23 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         var bounds = Context.ViewBounds;
         draw.Fill(bounds, new Color(0, 0, 0, 126));
 
+        if (Context.InventoryHotbarRenderer.DrawBackpackScreen(
+            draw,
+            _session.PlayerState.Inventory,
+            Context.Items,
+            bounds,
+            T("inventory.title"),
+            T("inventory.close_hint"),
+            _inventoryDetailSlotIndex))
+        {
+            return;
+        }
+
+        DrawInventoryFallbackOverlay(draw, bounds);
+    }
+
+    private void DrawInventoryFallbackOverlay(UiDrawContext draw, Rectangle bounds)
+    {
         var inventory = InventorySystem.Normalize(_session.PlayerState.Inventory, Context.Items);
         var columns = inventory.HotbarSize;
         var rows = Math.Max(1, (int)Math.Ceiling(inventory.Capacity / (double)columns));
@@ -549,9 +571,61 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
             if (input.WasKeyPressed(HotbarKeys[i]))
             {
                 _session.PlayerState.Inventory = InventorySystem.SelectHotbarSlot(_session.PlayerState.Inventory, i, Context.Items);
+                _inventoryDetailSlotIndex = i;
                 return;
             }
         }
+    }
+
+    private void HandleInventoryMouseInput()
+    {
+        var input = Context.Input.Current;
+        if (!input.LeftClickStarted)
+        {
+            return;
+        }
+
+        var backpackSlot = Context.InventoryHotbarRenderer.HitBackpackSlot(
+            _session.PlayerState.Inventory,
+            Context.Items,
+            Context.ViewBounds,
+            input.MousePosition);
+        if (backpackSlot >= 0)
+        {
+            _inventoryDetailSlotIndex = backpackSlot;
+            return;
+        }
+
+        var hotbarSlot = HitHotbarSlot(input.MousePosition);
+        if (hotbarSlot >= 0)
+        {
+            _session.PlayerState.Inventory = InventorySystem.SelectHotbarSlot(_session.PlayerState.Inventory, hotbarSlot, Context.Items);
+            _inventoryDetailSlotIndex = hotbarSlot;
+        }
+    }
+
+    private int HitHotbarSlot(Point pointer)
+    {
+        var bounds = HotbarBounds();
+        var hotbarScale = UiScale * GameplayHotbarScaleMultiplier;
+        var slotSize = Context.InventoryHotbarRenderer.PreferredSlotSize(hotbarScale);
+        var gap = Context.InventoryHotbarRenderer.PreferredGap(hotbarScale);
+        var inventory = InventorySystem.Normalize(_session.PlayerState.Inventory, Context.Items);
+
+        for (var i = 0; i < inventory.HotbarSize; i++)
+        {
+            var slotBounds = new Rectangle(
+                bounds.X + i * (slotSize.X + gap),
+                bounds.Y + (bounds.Height - slotSize.Y) / 2,
+                slotSize.X,
+                slotSize.Y);
+            if (slotBounds.Contains(pointer))
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     private bool InventoryRequested()
@@ -564,6 +638,10 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     private void ToggleInventory()
     {
         _inventoryOpen = !_inventoryOpen;
+        if (_inventoryOpen)
+        {
+            _inventoryDetailSlotIndex = InventorySystem.Normalize(_session.PlayerState.Inventory, Context.Items).SelectedHotbarIndex;
+        }
     }
 
     private void ExecuteSelectedItemAction()

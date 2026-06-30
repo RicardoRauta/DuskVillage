@@ -7,9 +7,16 @@
     "assets": [
       {
         "id": "backpack_idle",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Buttons/0.png",
+        "width": 23,
+        "height": 15,
+        "frameDurationMilliseconds": 120
+      },
+      {
+        "id": "backpack_background",
         "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/BackPack/1 - idle/0.png",
-        "width": 16,
-        "height": 16,
+        "width": 784,
+        "height": 704,
         "frameDurationMilliseconds": 120
       },
       {
@@ -23,6 +30,66 @@
         "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/HighLighter/0.png",
         "width": 61,
         "height": 59
+      },
+      {
+        "id": "paper_panel",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Paper Tileset/4.png",
+        "width": 64,
+        "height": 56
+      },
+      {
+        "id": "paper_top_left",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Paper Tileset/0.png",
+        "width": 64,
+        "height": 56
+      },
+      {
+        "id": "paper_top",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Paper Tileset/1.png",
+        "width": 64,
+        "height": 56
+      },
+      {
+        "id": "paper_top_right",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Paper Tileset/2.png",
+        "width": 64,
+        "height": 56
+      },
+      {
+        "id": "paper_left",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Paper Tileset/3.png",
+        "width": 64,
+        "height": 56
+      },
+      {
+        "id": "paper_right",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Paper Tileset/5.png",
+        "width": 64,
+        "height": 56
+      },
+      {
+        "id": "paper_bottom_left",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Paper Tileset/6.png",
+        "width": 64,
+        "height": 56
+      },
+      {
+        "id": "paper_bottom",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Paper Tileset/7.png",
+        "width": 64,
+        "height": 56
+      },
+      {
+        "id": "paper_bottom_right",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Paper Tileset/8.png",
+        "width": 64,
+        "height": 56
+      },
+      {
+        "id": "side_tab",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Side Tabs/Sprites/Side Tabs/0.png",
+        "width": 32,
+        "height": 32
       },
       {
         "id": "backpack_icon_water",
