@@ -10,7 +10,7 @@ This document tracks the current modular implementation order for Dusk Village. 
 4. Data-driven actions and map interaction effects.
 5. Local world assets, seasonal asset catalog, and fallback rendering.
 6. Starter world map, tile state, planting/watering, and player location.
-7. Gameplay map presentation: full-screen camera, smooth tile movement, and local asset organization.
+7. Gameplay map presentation: full-screen camera, continuous player movement, and local asset organization.
 
 ## Next Recommended Topics
 

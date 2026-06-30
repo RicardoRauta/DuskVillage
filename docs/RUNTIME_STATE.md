@@ -28,12 +28,16 @@ Runtime needs are updated by the pure `DuskVillage.Needs` module. The save only 
 
 ```text
 areaId
+positionX
+positionY
 tileX
 tileY
 ```
 
-The map module can later replace placeholder area/tile values with real world coordinates without changing the preset format.
+`positionX` and `positionY` are continuous tile-space coordinates used for gameplay movement and save/load. `tileX` and `tileY` are derived from the continuous position and kept for old saves, targeting, and simple tile interactions.
+
+The map module can later replace tile-space coordinates with real world coordinates without changing the preset format.
 
 ## Save Compatibility
 
-Old saves that only contain `entityId` and `characterPreset` normalize into a complete runtime state when loaded. Missing needs are copied from the character preset, money defaults to `0`, and location defaults to `starter_farm (7, 6)`.
+Old saves that only contain `entityId` and `characterPreset` normalize into a complete runtime state when loaded. Missing needs are copied from the character preset, money defaults to `0`, and location defaults to `starter_farm (7.00, 6.00)`.

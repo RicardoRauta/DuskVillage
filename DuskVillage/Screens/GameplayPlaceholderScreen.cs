@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using DuskVillage.Actions;
 using DuskVillage.Animations;
 using DuskVillage.Characters;
@@ -18,19 +19,15 @@ namespace DuskVillage.Screens;
 
 public sealed class GameplayPlaceholderScreen : GameScreenBase
 {
-    private const double MovementDurationSeconds = 0.22;
+    private const double PlayerMoveSpeedTilesPerSecond = 4.5;
 
     private readonly GameSessionSummary _session;
     private readonly VerticalMenu _menu = new();
     private readonly CharacterAnimationState _playerAnimation = new();
     private Vector2 _visualTilePosition;
-    private Vector2 _movementStartTile;
-    private Vector2 _movementEndTile;
     private double _messageTimer;
     private double _movementAnimationTimer;
-    private double _movementElapsedSeconds;
     private double _blockedMovementTimer;
-    private bool _isMoving;
     private string _message = string.Empty;
 
     public GameplayPlaceholderScreen(GameScreenContext context, GameSessionSummary session)
@@ -39,9 +36,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         _session = session;
         _session.WorldMap = WorldMapFactory.Normalize(_session.WorldMap);
         NormalizePlayerLocation();
-        _visualTilePosition = new Vector2(_session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY);
-        _movementStartTile = _visualTilePosition;
-        _movementEndTile = _visualTilePosition;
+        SyncVisualPosition();
 
         _menu.Add(new ButtonControl("action.plant_seeds", () => ExecuteMapAction("action_plant_seeds")));
         _menu.Add(new ButtonControl("action.water", () => ExecuteMapAction("action_water")));
@@ -63,13 +58,8 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         }
 
         LayoutMenu();
-        UpdateMovementInterpolation(gameTime);
-        var moved = HandleMovement();
-        if (!_isMoving)
-        {
-            HandleActionHotkeys();
-        }
-
+        var moved = HandleMovement(gameTime);
+        HandleActionHotkeys();
         UpdatePlayerAnimation(gameTime, moved);
         _menu.Update(Context);
 
@@ -118,40 +108,42 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         EndUi();
     }
 
-    private bool HandleMovement()
+    private bool HandleMovement(GameTime gameTime)
     {
-        if (_isMoving)
+        var input = ReadMovementInput(Context.Input.Current);
+        if (input.LengthSquared() <= 0.0001f)
         {
             return false;
         }
 
-        var direction = ReadMovementDirection(Context.Input.Current);
-        if (!direction.HasValue)
+        var result = WorldMapContinuousMovementSystem.Move(
+            _session.WorldMap,
+            _session.PlayerState.Location,
+            input.X,
+            input.Y,
+            gameTime.ElapsedGameTime.TotalSeconds,
+            PlayerMoveSpeedTilesPerSecond);
+
+        if (result.FacingDirection.HasValue)
         {
-            return false;
+            CharacterAnimationSystem.SetMotion(_playerAnimation, CharacterAnimationIds.Idle, result.FacingDirection.Value);
         }
 
-        CharacterAnimationSystem.SetMotion(_playerAnimation, CharacterAnimationIds.Idle, direction.Value);
-        var result = WorldMapTargetResolver.TryMove(_session.WorldMap, _session.PlayerState.Location, direction.Value);
-        if (!result.Moved)
+        if (result.Blocked && _blockedMovementTimer <= 0)
         {
-            if (_blockedMovementTimer <= 0)
-            {
-                ShowMessage(T(result.MessageKey));
-                _blockedMovementTimer = 0.2;
-            }
-
-            return false;
+            ShowMessage(T(result.MessageKey));
+            _blockedMovementTimer = 0.2;
         }
 
-        _movementStartTile = _visualTilePosition;
-        _movementEndTile = new Vector2(result.Location.TileX, result.Location.TileY);
-        _movementElapsedSeconds = 0;
-        _isMoving = true;
-        _blockedMovementTimer = 0;
         _session.PlayerState.Location = result.Location;
-        _movementAnimationTimer = MovementDurationSeconds;
-        return true;
+        SyncVisualPosition();
+
+        if (result.Moved)
+        {
+            _blockedMovementTimer = 0;
+        }
+
+        return result.Moved;
     }
 
     private void HandleActionHotkeys()
@@ -170,11 +162,6 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private void ExecuteMapAction(string actionId)
     {
-        if (_isMoving)
-        {
-            return;
-        }
-
         var target = TargetTile();
         var request = new GameActionRequest
         {
@@ -258,10 +245,10 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     {
         var tileCenterX = viewport.Bounds.X + (_visualTilePosition.X + 0.5f) * viewport.TileSize;
         var tileBottomY = viewport.Bounds.Y + (_visualTilePosition.Y + 1f) * viewport.TileSize;
-        var size = Math.Clamp(viewport.TileSize * 2, 72, 128);
+        var size = Math.Clamp((int)Math.Round(viewport.TileSize * 3.2f), 96, 256);
         var bounds = new Rectangle(
             (int)Math.Round(tileCenterX - size / 2f),
-            (int)Math.Round(tileBottomY - size + viewport.TileSize * 0.08f),
+            (int)Math.Round(tileBottomY - size + viewport.TileSize * 0.16f),
             size,
             size);
         Context.CharacterSpriteRenderer.Draw(draw, _session.PlayerPreset.Appearance, _playerAnimation, bounds);
@@ -274,7 +261,11 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         DrawLine(draw, T("gameplay.world_time", _session.WorldTime.Day, T("season." + _session.WorldTime.CurrentSeason), _session.WorldTime.DayOfSeason, _session.WorldTime.Year, _session.WorldTime.CurrentTime), panel.X + 18, ref y, draw.Theme.Text, 0.72f);
         DrawLine(draw, T("gameplay.money", _session.PlayerState.Money), panel.X + 18, ref y, draw.Theme.Text, 0.78f);
         DrawLine(draw, T("character.review.needs", _session.PlayerState.Needs.Energy, _session.PlayerState.Needs.Hunger, _session.PlayerState.Needs.Health, _session.PlayerState.Needs.Mood), panel.X + 18, ref y, draw.Theme.Text, 0.68f);
-        DrawLine(draw, T("gameplay.location", _session.PlayerState.Location.AreaId, _session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY), panel.X + 18, ref y, draw.Theme.Text, 0.72f);
+        DrawLine(draw, T(
+            "gameplay.location",
+            _session.PlayerState.Location.AreaId,
+            PositionText(_session.PlayerState.Location.GetPositionX()),
+            PositionText(_session.PlayerState.Location.GetPositionY())), panel.X + 18, ref y, draw.Theme.Text, 0.72f);
         DrawLine(draw, T("world.map.target", target.X, target.Y), panel.X + 18, ref y, draw.Theme.MutedText, 0.72f);
 
         var tile = WorldMapRules.GetTile(_session.WorldMap, target.X, target.Y);
@@ -349,26 +340,6 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         return T("gameplay.time_advanced");
     }
 
-    private void UpdateMovementInterpolation(GameTime gameTime)
-    {
-        if (!_isMoving)
-        {
-            _visualTilePosition = new Vector2(_session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY);
-            return;
-        }
-
-        _movementElapsedSeconds += gameTime.ElapsedGameTime.TotalSeconds;
-        var progress = (float)Math.Clamp(_movementElapsedSeconds / MovementDurationSeconds, 0, 1);
-        var eased = progress * progress * (3f - 2f * progress);
-        _visualTilePosition = Vector2.Lerp(_movementStartTile, _movementEndTile, eased);
-
-        if (progress >= 1f)
-        {
-            _visualTilePosition = _movementEndTile;
-            _isMoving = false;
-        }
-    }
-
     private void UpdatePlayerAnimation(GameTime gameTime, bool moved)
     {
         if (moved)
@@ -388,50 +359,73 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         CharacterAnimationSystem.Advance(_playerAnimation, gameTime.ElapsedGameTime);
     }
 
-    private CharacterFacingDirection? ReadMovementDirection(InputSnapshot input)
+    private Vector2 ReadMovementInput(InputSnapshot input)
     {
         var settings = Context.Settings.Current.Input;
-        if (input.IsKeyDown(settings.MoveUp) ||
-            input.GamePad.IsButtonDown(settings.ControllerMoveUp) ||
-            input.GamePad.ThumbSticks.Left.Y > 0.5f)
+        var x = 0f;
+        var y = 0f;
+
+        if (input.IsKeyDown(settings.MoveLeft) || input.GamePad.IsButtonDown(settings.ControllerMoveLeft))
         {
-            return CharacterFacingDirection.Up;
+            x -= 1f;
         }
 
-        if (input.IsKeyDown(settings.MoveDown) ||
-            input.GamePad.IsButtonDown(settings.ControllerMoveDown) ||
-            input.GamePad.ThumbSticks.Left.Y < -0.5f)
+        if (input.IsKeyDown(settings.MoveRight) || input.GamePad.IsButtonDown(settings.ControllerMoveRight))
         {
-            return CharacterFacingDirection.Down;
+            x += 1f;
         }
 
-        if (input.IsKeyDown(settings.MoveRight) ||
-            input.GamePad.IsButtonDown(settings.ControllerMoveRight) ||
-            input.GamePad.ThumbSticks.Left.X > 0.5f)
+        if (input.IsKeyDown(settings.MoveUp) || input.GamePad.IsButtonDown(settings.ControllerMoveUp))
         {
-            return CharacterFacingDirection.Right;
+            y -= 1f;
         }
 
-        if (input.IsKeyDown(settings.MoveLeft) ||
-            input.GamePad.IsButtonDown(settings.ControllerMoveLeft) ||
-            input.GamePad.ThumbSticks.Left.X < -0.5f)
+        if (input.IsKeyDown(settings.MoveDown) || input.GamePad.IsButtonDown(settings.ControllerMoveDown))
         {
-            return CharacterFacingDirection.Left;
+            y += 1f;
         }
 
-        return null;
+        var stick = input.GamePad.ThumbSticks.Left;
+        if (Math.Abs(stick.X) > 0.25f || Math.Abs(stick.Y) > 0.25f)
+        {
+            x = stick.X;
+            y = -stick.Y;
+        }
+
+        var movement = new Vector2(x, y);
+        if (movement.LengthSquared() > 1f)
+        {
+            movement.Normalize();
+        }
+
+        return movement;
     }
 
     private void NormalizePlayerLocation()
     {
         _session.PlayerState.Location ??= new PlayerLocationState();
         _session.PlayerState.Location.AreaId = _session.WorldMap.AreaId;
-        if (!WorldMapRules.IsInside(_session.WorldMap, _session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY) ||
-            !WorldMapRules.IsPassable(WorldMapRules.GetTile(_session.WorldMap, _session.PlayerState.Location.TileX, _session.PlayerState.Location.TileY)))
+        _session.PlayerState.Location.EnsurePosition();
+        if (!WorldMapContinuousMovementSystem.CanStandAt(
+            _session.WorldMap,
+            _session.PlayerState.Location.AreaId,
+            _session.PlayerState.Location.GetPositionX(),
+            _session.PlayerState.Location.GetPositionY()))
         {
-            _session.PlayerState.Location.TileX = WorldMapFactory.DefaultPlayerTileX;
-            _session.PlayerState.Location.TileY = WorldMapFactory.DefaultPlayerTileY;
+            _session.PlayerState.Location.SetTile(WorldMapFactory.DefaultPlayerTileX, WorldMapFactory.DefaultPlayerTileY);
         }
+    }
+
+    private void SyncVisualPosition()
+    {
+        _visualTilePosition = new Vector2(
+            (float)_session.PlayerState.Location.GetPositionX(),
+            (float)_session.PlayerState.Location.GetPositionY());
+    }
+
+    private static string PositionText(double position)
+    {
+        return position.ToString("0.00", CultureInfo.InvariantCulture);
     }
 
     private static string FullName(CharacterPreset preset)

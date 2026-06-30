@@ -30,6 +30,7 @@ public static class WorldMapTargetResolver
         };
 
         current.AreaId = string.IsNullOrWhiteSpace(current.AreaId) ? normalizedMap.AreaId : current.AreaId;
+        current.EnsurePosition();
         var (targetX, targetY) = ResolveAdjacentTile(current, direction);
         if (!current.AreaId.Equals(normalizedMap.AreaId, System.StringComparison.OrdinalIgnoreCase) ||
             !WorldMapRules.IsInside(normalizedMap, targetX, targetY))
@@ -44,8 +45,7 @@ public static class WorldMapTargetResolver
         }
 
         current.AreaId = normalizedMap.AreaId;
-        current.TileX = targetX;
-        current.TileY = targetY;
+        current.SetTile(targetX, targetY);
         return new WorldMapMoveResult(true, current, "world.map.moved");
     }
 }

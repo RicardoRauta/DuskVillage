@@ -14,7 +14,7 @@ path tiles
 soil plot for early farming
 ```
 
-The player starts at `starter_farm (7, 6)`, just below the starter soil plot. Movement remains tile-based in world state and save data, but the gameplay screen interpolates the rendered character between tiles so walking feels smooth. Non-passable tiles such as water still block movement.
+The player starts at `starter_farm (7, 6)`, just below the starter soil plot. Movement uses continuous tile-space coordinates, so the player can stop between tiles. `tileX` and `tileY` remain derived compatibility fields for targeting, actions, and old saves. Non-passable tiles such as water still block movement.
 
 ## Tile Data
 

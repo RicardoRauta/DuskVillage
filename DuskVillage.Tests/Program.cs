@@ -30,6 +30,8 @@ var tests = new (string Name, Action Run)[]
     ("Seasonal world asset catalog supports missing zips", SeasonalWorldAssetCatalogSupportsMissingZips),
     ("World map default has farm plot", WorldMapDefaultHasFarmPlot),
     ("World map movement respects passability", WorldMapMovementRespectsPassability),
+    ("World map continuous movement supports fractional position", WorldMapContinuousMovementSupportsFractionalPosition),
+    ("World map continuous movement blocks impassable tiles", WorldMapContinuousMovementBlocksImpassableTiles),
     ("World map target resolver uses facing", WorldMapTargetResolverUsesFacing),
     ("World map actions change tile state", WorldMapActionsChangeTileState),
     ("World map action rejects invalid tile", WorldMapActionRejectsInvalidTile),
@@ -361,10 +363,9 @@ static void WorldMapMovementRespectsPassability()
     var map = WorldMapFactory.CreateDefault();
     var location = new PlayerLocationState
     {
-        AreaId = map.AreaId,
-        TileX = 1,
-        TileY = 1
+        AreaId = map.AreaId
     };
+    location.SetTile(1, 1);
 
     var blocked = WorldMapTargetResolver.TryMove(map, location, CharacterFacingDirection.Left);
     var moved = WorldMapTargetResolver.TryMove(map, location, CharacterFacingDirection.Right);
@@ -375,14 +376,49 @@ static void WorldMapMovementRespectsPassability()
     AssertEqual(2, moved.Location.TileX, "Movement should update X.");
 }
 
+static void WorldMapContinuousMovementSupportsFractionalPosition()
+{
+    var map = WorldMapFactory.CreateDefault();
+    var location = new PlayerLocationState
+    {
+        AreaId = map.AreaId
+    };
+    location.SetTile(7, 6);
+
+    var result = WorldMapContinuousMovementSystem.Move(map, location, 1, 0, 0.1, 4.5);
+
+    Assert(result.Moved, "Continuous movement should move inside passable tiles.");
+    Assert(result.Location.GetPositionX() > 7, "Continuous movement should advance X beyond the starting tile.");
+    Assert(result.Location.GetPositionX() < 8, "Short continuous movement should be able to stop between tiles.");
+    AssertEqual(7, result.Location.TileX, "Small fractional movement should keep the current tile until crossing the midpoint.");
+    AssertApprox(7.45, result.Location.GetPositionX(), 0.001, "Continuous movement should preserve fractional X.");
+    AssertApprox(6, result.Location.GetPositionY(), 0.001, "Continuous movement should preserve Y.");
+}
+
+static void WorldMapContinuousMovementBlocksImpassableTiles()
+{
+    var map = WorldMapFactory.CreateDefault();
+    var location = new PlayerLocationState
+    {
+        AreaId = map.AreaId
+    };
+    location.SetTile(1, 1);
+
+    var result = WorldMapContinuousMovementSystem.Move(map, location, -1, 0, 1, 4.5);
+
+    Assert(!result.Moved, "Continuous movement should not enter impassable water.");
+    Assert(result.Blocked, "Continuous movement should report blocked movement.");
+    AssertApprox(1, result.Location.GetPositionX(), 0.001, "Blocked movement should keep X.");
+    AssertApprox(1, result.Location.GetPositionY(), 0.001, "Blocked movement should keep Y.");
+}
+
 static void WorldMapTargetResolverUsesFacing()
 {
     var location = new PlayerLocationState
     {
-        AreaId = WorldMapFactory.DefaultAreaId,
-        TileX = 7,
-        TileY = 7
+        AreaId = WorldMapFactory.DefaultAreaId
     };
+    location.SetTile(7, 7);
 
     var up = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Up);
     var right = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Right);
@@ -397,8 +433,7 @@ static void WorldMapActionsChangeTileState()
     var map = WorldMapFactory.CreateDefault();
     var player = PlayerRuntimeFactory.CreateNew(CharacterPresetFactory.CreateDefault());
     player.Location.AreaId = map.AreaId;
-    player.Location.TileX = 4;
-    player.Location.TileY = 6;
+    player.Location.SetTile(4, 6);
     player.Needs.Energy = 80;
     player.Needs.Hunger = 70;
 
@@ -506,6 +541,8 @@ static void PlayerRuntimeStartsFromPresetNeeds()
     AssertEqual(64, runtime.Needs.Hunger, "Runtime hunger should start from preset needs.");
     AssertEqual(0, runtime.Money, "Runtime money should start at zero.");
     AssertEqual(PlayerRuntimeFactory.DefaultAreaId, runtime.Location.AreaId, "Runtime location should start at the default area.");
+    AssertApprox(WorldMapFactory.DefaultPlayerTileX, runtime.Location.GetPositionX(), 0.001, "Runtime X position should start at the default spawn.");
+    AssertApprox(WorldMapFactory.DefaultPlayerTileY, runtime.Location.GetPositionY(), 0.001, "Runtime Y position should start at the default spawn.");
 
     runtime.Needs.Energy = 10;
     AssertEqual(72, preset.Needs.Energy, "Changing runtime needs should not mutate preset needs.");
@@ -932,8 +969,7 @@ static void SaveGameRoundTripsCharacterPreset()
     saveGame.PlayerState.Needs.Energy = 34;
     saveGame.PlayerState.Needs.Hunger = 56;
     saveGame.PlayerState.Location.AreaId = "starter_farm";
-    saveGame.PlayerState.Location.TileX = 7;
-    saveGame.PlayerState.Location.TileY = 9;
+    saveGame.PlayerState.Location.SetPosition(7.35, 8.75);
     saveGame.WorldState.Map = WorldMapFactory.CreateDefault();
     var savedTile = WorldMapRules.GetTile(saveGame.WorldState.Map, 4, 5);
     savedTile.StateId = WorldMapTileStateIds.Watered;
@@ -955,6 +991,8 @@ static void SaveGameRoundTripsCharacterPreset()
     AssertEqual("starter_farm", loaded.PlayerState.Location.AreaId, "Save should keep runtime area.");
     AssertEqual(7, loaded.PlayerState.Location.TileX, "Save should keep runtime tile X.");
     AssertEqual(9, loaded.PlayerState.Location.TileY, "Save should keep runtime tile Y.");
+    AssertApprox(7.35, loaded.PlayerState.Location.GetPositionX(), 0.001, "Save should keep fractional runtime X position.");
+    AssertApprox(8.75, loaded.PlayerState.Location.GetPositionY(), 0.001, "Save should keep fractional runtime Y position.");
     AssertEqual(WorldMapTileStateIds.Watered, WorldMapRules.GetTile(loaded.WorldState.Map, 4, 5).StateId, "Save should keep map tile state.");
     AssertEqual(WorldMapCropIds.StarterSeeds, WorldMapRules.GetTile(loaded.WorldState.Map, 4, 5).CropId, "Save should keep map crop id.");
 }
@@ -970,6 +1008,14 @@ static void Assert(bool condition, string message)
 static void AssertEqual<T>(T expected, T actual, string message)
 {
     if (!EqualityComparer<T>.Default.Equals(expected, actual))
+    {
+        throw new InvalidOperationException($"{message} Expected '{expected}', got '{actual}'.");
+    }
+}
+
+static void AssertApprox(double expected, double actual, double tolerance, string message)
+{
+    if (Math.Abs(expected - actual) > tolerance)
     {
         throw new InvalidOperationException($"{message} Expected '{expected}', got '{actual}'.");
     }

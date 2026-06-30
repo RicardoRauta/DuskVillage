@@ -62,8 +62,9 @@ public static class PlayerRuntimeFactory
     {
         location ??= CreateDefaultLocation();
         location.AreaId = string.IsNullOrWhiteSpace(location.AreaId) ? DefaultAreaId : location.AreaId.Trim();
-        location.TileX = Math.Max(0, location.TileX);
-        location.TileY = Math.Max(0, location.TileY);
+        location.PositionX = Math.Max(0, location.GetPositionX());
+        location.PositionY = Math.Max(0, location.GetPositionY());
+        location.SyncTileFromPosition();
         return location;
     }
 
@@ -73,7 +74,9 @@ public static class PlayerRuntimeFactory
         {
             AreaId = DefaultAreaId,
             TileX = WorldMapFactory.DefaultPlayerTileX,
-            TileY = WorldMapFactory.DefaultPlayerTileY
+            TileY = WorldMapFactory.DefaultPlayerTileY,
+            PositionX = WorldMapFactory.DefaultPlayerTileX,
+            PositionY = WorldMapFactory.DefaultPlayerTileY
         };
     }
 }
