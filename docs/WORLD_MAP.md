@@ -56,4 +56,6 @@ The base `GameActionSystem` still handles actor state such as time, energy, hung
 
 The renderer uses `WorldAssets` for seasonal terrain when local zips are present and falls back to generated colors when paid/local assets are missing.
 
+Gameplay draws the Mana Seed player sprite at the same pixel scale as the seasonal tiles: `64px` character cells over `16px` terrain tiles, so the full character frame occupies four terrain tiles. The visible body is smaller because the source frame includes transparent padding.
+
 The renderer is intentionally separate from `WorldMap` so maps can later be rendered by different cameras, editors, debug screens, or mod tools without changing gameplay rules.

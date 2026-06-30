@@ -44,6 +44,7 @@ var tests = new (string Name, Action Run)[]
     ("Character run guide stays separate from walk", CharacterRunGuideStaysSeparateFromWalk),
     ("Expanded character clips are four way", ExpandedCharacterClipsAreFourWay),
     ("Character animation timeline honors variable durations", CharacterAnimationTimelineHonorsVariableDurations),
+    ("Character animation keeps timeline across repeated walk motion", CharacterAnimationKeepsTimelineAcrossRepeatedWalkMotion),
     ("Character animation cell coordinates are stable", CharacterAnimationCellCoordinatesAreStable),
     ("Action registry validates definitions", ActionRegistryValidatesDefinitions),
     ("Action execution applies effects and time", ActionExecutionAppliesEffectsAndTime),
@@ -760,6 +761,18 @@ static void CharacterAnimationTimelineHonorsVariableDurations()
 
     CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(135));
     AssertEqual(50, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 050 should start after the second 135ms frame.");
+}
+
+static void CharacterAnimationKeepsTimelineAcrossRepeatedWalkMotion()
+{
+    var state = new CharacterAnimationState();
+    CharacterAnimationSystem.SetMotion(state, CharacterAnimationIds.Walk, CharacterFacingDirection.Down);
+    CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(150));
+
+    CharacterAnimationSystem.SetMotion(state, CharacterAnimationIds.Walk, CharacterFacingDirection.Down);
+
+    AssertEqual(150, state.ElapsedMilliseconds, "Repeating the same walk motion should not reset elapsed animation time.");
+    AssertEqual(49, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Walk should keep its current frame after repeated motion.");
 }
 
 static void CharacterAnimationCellCoordinatesAreStable()

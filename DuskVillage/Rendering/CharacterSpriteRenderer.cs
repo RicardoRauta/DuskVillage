@@ -19,9 +19,9 @@ public sealed class CharacterSpriteRenderer
         _textures = textures;
     }
 
-    public void Draw(UiDrawContext draw, CharacterAppearanceData appearance, CharacterAnimationState animation, Rectangle bounds)
+    public void Draw(UiDrawContext draw, CharacterAppearanceData appearance, CharacterAnimationState animation, Rectangle bounds, int padding = 20)
     {
-        var destinationSize = Math.Min(bounds.Width - 20, bounds.Height - 20);
+        var destinationSize = Math.Min(bounds.Width - padding, bounds.Height - padding);
         destinationSize = Math.Max(CharacterAnimationCatalog.CellSize, destinationSize);
         var destination = new Rectangle(
             bounds.X + (bounds.Width - destinationSize) / 2,

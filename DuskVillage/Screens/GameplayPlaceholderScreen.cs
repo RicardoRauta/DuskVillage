@@ -20,6 +20,7 @@ namespace DuskVillage.Screens;
 public sealed class GameplayPlaceholderScreen : GameScreenBase
 {
     private const double PlayerMoveSpeedTilesPerSecond = 4.5;
+    private const int TerrainTileSourceSize = 16;
 
     private readonly GameSessionSummary _session;
     private readonly VerticalMenu _menu = new();
@@ -126,7 +127,10 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
         if (result.FacingDirection.HasValue)
         {
-            CharacterAnimationSystem.SetMotion(_playerAnimation, CharacterAnimationIds.Idle, result.FacingDirection.Value);
+            CharacterAnimationSystem.SetMotion(
+                _playerAnimation,
+                result.Moved ? CharacterAnimationIds.Walk : CharacterAnimationIds.Idle,
+                result.FacingDirection.Value);
         }
 
         if (result.Blocked && _blockedMovementTimer <= 0)
@@ -245,13 +249,15 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     {
         var tileCenterX = viewport.Bounds.X + (_visualTilePosition.X + 0.5f) * viewport.TileSize;
         var tileBottomY = viewport.Bounds.Y + (_visualTilePosition.Y + 1f) * viewport.TileSize;
-        var size = Math.Clamp((int)Math.Round(viewport.TileSize * 3.2f), 96, 256);
+        var size = Math.Max(
+            CharacterAnimationCatalog.CellSize,
+            (int)Math.Round(viewport.TileSize * CharacterAnimationCatalog.CellSize / (float)TerrainTileSourceSize));
         var bounds = new Rectangle(
             (int)Math.Round(tileCenterX - size / 2f),
             (int)Math.Round(tileBottomY - size + viewport.TileSize * 0.16f),
             size,
             size);
-        Context.CharacterSpriteRenderer.Draw(draw, _session.PlayerPreset.Appearance, _playerAnimation, bounds);
+        Context.CharacterSpriteRenderer.Draw(draw, _session.PlayerPreset.Appearance, _playerAnimation, bounds, padding: 0);
     }
 
     private void DrawInfoPanel(UiDrawContext draw, Rectangle panel, (int X, int Y) target)
