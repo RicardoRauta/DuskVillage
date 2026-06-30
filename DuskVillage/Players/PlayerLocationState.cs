@@ -14,18 +14,18 @@ public sealed class PlayerLocationState
 
     public double GetPositionX()
     {
-        return PositionX ?? TileX;
+        return PositionX ?? TileX + 0.5;
     }
 
     public double GetPositionY()
     {
-        return PositionY ?? TileY;
+        return PositionY ?? TileY + 0.5;
     }
 
     public void EnsurePosition()
     {
-        PositionX ??= TileX;
-        PositionY ??= TileY;
+        PositionX ??= TileX + 0.5;
+        PositionY ??= TileY + 0.5;
         SyncTileFromPosition();
     }
 
@@ -40,8 +40,8 @@ public sealed class PlayerLocationState
     {
         TileX = tileX;
         TileY = tileY;
-        PositionX = tileX;
-        PositionY = tileY;
+        PositionX = tileX + 0.5;
+        PositionY = tileY + 0.5;
     }
 
     public void SyncTileFromPosition()
@@ -64,6 +64,6 @@ public sealed class PlayerLocationState
 
     public static int PositionToTile(double position)
     {
-        return (int)System.Math.Floor(position + 0.5);
+        return (int)System.Math.Floor(position);
     }
 }

@@ -75,8 +75,8 @@ public static class PlayerRuntimeFactory
             AreaId = DefaultAreaId,
             TileX = WorldMapFactory.DefaultPlayerTileX,
             TileY = WorldMapFactory.DefaultPlayerTileY,
-            PositionX = WorldMapFactory.DefaultPlayerTileX,
-            PositionY = WorldMapFactory.DefaultPlayerTileY
+            PositionX = WorldMapFactory.DefaultPlayerTileX + 0.5,
+            PositionY = WorldMapFactory.DefaultPlayerTileY + 0.5
         };
     }
 }

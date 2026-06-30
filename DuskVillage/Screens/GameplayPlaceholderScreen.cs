@@ -21,6 +21,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 {
     private const double PlayerMoveSpeedTilesPerSecond = 4.5;
     private const int TerrainTileSourceSize = 16;
+    private const float PlayerFeetAnchorYInCell = 44f;
 
     private readonly GameSessionSummary _session;
     private readonly VerticalMenu _menu = new();
@@ -247,14 +248,14 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private void DrawPlayer(UiDrawContext draw, WorldMapViewport viewport)
     {
-        var tileCenterX = viewport.Bounds.X + (_visualTilePosition.X + 0.5f) * viewport.TileSize;
-        var tileBottomY = viewport.Bounds.Y + (_visualTilePosition.Y + 1f) * viewport.TileSize;
+        var feetX = viewport.Bounds.X + _visualTilePosition.X * viewport.TileSize;
+        var feetY = viewport.Bounds.Y + _visualTilePosition.Y * viewport.TileSize;
         var size = Math.Max(
             CharacterAnimationCatalog.CellSize,
             (int)Math.Round(viewport.TileSize * CharacterAnimationCatalog.CellSize / (float)TerrainTileSourceSize));
         var bounds = new Rectangle(
-            (int)Math.Round(tileCenterX - size / 2f),
-            (int)Math.Round(tileBottomY - size + viewport.TileSize * 0.16f),
+            (int)Math.Round(feetX - size / 2f),
+            (int)Math.Round(feetY - size * PlayerFeetAnchorYInCell / CharacterAnimationCatalog.CellSize),
             size,
             size);
         Context.CharacterSpriteRenderer.Draw(draw, _session.PlayerPreset.Appearance, _playerAnimation, bounds, padding: 0);

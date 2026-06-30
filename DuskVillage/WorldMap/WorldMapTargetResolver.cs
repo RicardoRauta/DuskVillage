@@ -5,18 +5,29 @@ namespace DuskVillage.WorldMap;
 
 public static class WorldMapTargetResolver
 {
+    private const double HorizontalToeOffsetTiles = 0.56;
+    private const double DownToeOffsetTiles = 0.56;
+    private const double UpHeadOffsetTiles = -1.94;
+
     public static (int X, int Y) ResolveAdjacentTile(PlayerLocationState location, CharacterFacingDirection facingDirection)
     {
-        var x = location?.TileX ?? 0;
-        var y = location?.TileY ?? 0;
+        var positionX = location?.GetPositionX() ?? 0.5;
+        var positionY = location?.GetPositionY() ?? 0.5;
 
         return facingDirection switch
         {
-            CharacterFacingDirection.Up => (x, y - 1),
-            CharacterFacingDirection.Right => (x + 1, y),
-            CharacterFacingDirection.Left => (x - 1, y),
-            _ => (x, y + 1)
+            CharacterFacingDirection.Up => TargetTile(positionX, positionY + UpHeadOffsetTiles),
+            CharacterFacingDirection.Right => TargetTile(positionX + HorizontalToeOffsetTiles, positionY),
+            CharacterFacingDirection.Left => TargetTile(positionX - HorizontalToeOffsetTiles, positionY),
+            _ => TargetTile(positionX, positionY + DownToeOffsetTiles)
         };
+    }
+
+    private static (int X, int Y) TargetTile(double positionX, double positionY)
+    {
+        return (
+            PlayerLocationState.PositionToTile(positionX),
+            PlayerLocationState.PositionToTile(positionY));
     }
 
     public static WorldMapMoveResult TryMove(WorldMapState map, PlayerLocationState location, CharacterFacingDirection direction)
@@ -31,7 +42,7 @@ public static class WorldMapTargetResolver
 
         current.AreaId = string.IsNullOrWhiteSpace(current.AreaId) ? normalizedMap.AreaId : current.AreaId;
         current.EnsurePosition();
-        var (targetX, targetY) = ResolveAdjacentTile(current, direction);
+        var (targetX, targetY) = ResolveMovementTile(current, direction);
         if (!current.AreaId.Equals(normalizedMap.AreaId, System.StringComparison.OrdinalIgnoreCase) ||
             !WorldMapRules.IsInside(normalizedMap, targetX, targetY))
         {
@@ -47,5 +58,19 @@ public static class WorldMapTargetResolver
         current.AreaId = normalizedMap.AreaId;
         current.SetTile(targetX, targetY);
         return new WorldMapMoveResult(true, current, "world.map.moved");
+    }
+
+    private static (int X, int Y) ResolveMovementTile(PlayerLocationState location, CharacterFacingDirection facingDirection)
+    {
+        var tileX = PlayerLocationState.PositionToTile(location.GetPositionX());
+        var tileY = PlayerLocationState.PositionToTile(location.GetPositionY());
+
+        return facingDirection switch
+        {
+            CharacterFacingDirection.Up => (tileX, tileY - 1),
+            CharacterFacingDirection.Right => (tileX + 1, tileY),
+            CharacterFacingDirection.Left => (tileX - 1, tileY),
+            _ => (tileX, tileY + 1)
+        };
     }
 }

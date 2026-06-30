@@ -83,8 +83,8 @@ public sealed class WorldMapRenderer
 
         if (focusTile.HasValue)
         {
-            mapX = (int)Math.Round(bounds.X + bounds.Width / 2f - (focusTile.Value.X + 0.5f) * tileSize);
-            mapY = (int)Math.Round(bounds.Y + bounds.Height / 2f - (focusTile.Value.Y + 0.5f) * tileSize);
+            mapX = (int)Math.Round(bounds.X + bounds.Width / 2f - focusTile.Value.X * tileSize);
+            mapY = (int)Math.Round(bounds.Y + bounds.Height / 2f - focusTile.Value.Y * tileSize);
         }
 
         mapX = ClampMapOffset(mapX, bounds.X, bounds.Width, mapWidth);

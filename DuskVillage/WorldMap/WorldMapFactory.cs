@@ -7,8 +7,8 @@ namespace DuskVillage.WorldMap;
 public static class WorldMapFactory
 {
     public const string DefaultAreaId = "starter_farm";
-    public const int DefaultWidth = 16;
-    public const int DefaultHeight = 12;
+    public const int DefaultWidth = 24;
+    public const int DefaultHeight = 18;
     public const int DefaultPlayerTileX = 7;
     public const int DefaultPlayerTileY = 6;
 

@@ -33,6 +33,7 @@ var tests = new (string Name, Action Run)[]
     ("World map continuous movement supports fractional position", WorldMapContinuousMovementSupportsFractionalPosition),
     ("World map continuous movement blocks impassable tiles", WorldMapContinuousMovementBlocksImpassableTiles),
     ("World map target resolver uses facing", WorldMapTargetResolverUsesFacing),
+    ("World map target resolver uses fractional position", WorldMapTargetResolverUsesFractionalPosition),
     ("World map actions change tile state", WorldMapActionsChangeTileState),
     ("World map action rejects invalid tile", WorldMapActionRejectsInvalidTile),
     ("Player runtime starts from preset needs", PlayerRuntimeStartsFromPresetNeeds),
@@ -389,11 +390,11 @@ static void WorldMapContinuousMovementSupportsFractionalPosition()
     var result = WorldMapContinuousMovementSystem.Move(map, location, 1, 0, 0.1, 4.5);
 
     Assert(result.Moved, "Continuous movement should move inside passable tiles.");
-    Assert(result.Location.GetPositionX() > 7, "Continuous movement should advance X beyond the starting tile.");
+    Assert(result.Location.GetPositionX() > 7.5, "Continuous movement should advance X beyond the starting foot position.");
     Assert(result.Location.GetPositionX() < 8, "Short continuous movement should be able to stop between tiles.");
-    AssertEqual(7, result.Location.TileX, "Small fractional movement should keep the current tile until crossing the midpoint.");
-    AssertApprox(7.45, result.Location.GetPositionX(), 0.001, "Continuous movement should preserve fractional X.");
-    AssertApprox(6, result.Location.GetPositionY(), 0.001, "Continuous movement should preserve Y.");
+    AssertEqual(7, result.Location.TileX, "Small fractional movement should keep the current tile until crossing the tile edge.");
+    AssertApprox(7.95, result.Location.GetPositionX(), 0.001, "Continuous movement should preserve fractional X.");
+    AssertApprox(6.5, result.Location.GetPositionY(), 0.001, "Continuous movement should preserve Y.");
 }
 
 static void WorldMapContinuousMovementBlocksImpassableTiles()
@@ -409,8 +410,8 @@ static void WorldMapContinuousMovementBlocksImpassableTiles()
 
     Assert(!result.Moved, "Continuous movement should not enter impassable water.");
     Assert(result.Blocked, "Continuous movement should report blocked movement.");
-    AssertApprox(1, result.Location.GetPositionX(), 0.001, "Blocked movement should keep X.");
-    AssertApprox(1, result.Location.GetPositionY(), 0.001, "Blocked movement should keep Y.");
+    AssertApprox(1.5, result.Location.GetPositionX(), 0.001, "Blocked movement should keep X.");
+    AssertApprox(1.5, result.Location.GetPositionY(), 0.001, "Blocked movement should keep Y.");
 }
 
 static void WorldMapTargetResolverUsesFacing()
@@ -423,9 +424,30 @@ static void WorldMapTargetResolverUsesFacing()
 
     var up = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Up);
     var right = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Right);
+    var left = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Left);
 
-    AssertEqual((7, 6), up, "Up should target the tile above.");
-    AssertEqual((8, 7), right, "Right should target the tile to the right.");
+    AssertEqual((7, 5), up, "Up should target the tile at the head anchor.");
+    AssertEqual((8, 7), right, "Right should target the tile in front of the side-facing feet.");
+    AssertEqual((6, 7), left, "Left should target the tile in front of the side-facing feet.");
+}
+
+static void WorldMapTargetResolverUsesFractionalPosition()
+{
+    var location = new PlayerLocationState
+    {
+        AreaId = WorldMapFactory.DefaultAreaId
+    };
+    location.SetPosition(6.5, 6.5);
+
+    var down = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Down);
+    var right = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Right);
+    var left = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Left);
+    var up = WorldMapTargetResolver.ResolveAdjacentTile(location, CharacterFacingDirection.Up);
+
+    AssertEqual((6, 7), down, "Down should target the tile in front of the toe tips.");
+    AssertEqual((7, 6), right, "Side targeting should target the tile in front of the side-facing feet.");
+    AssertEqual((5, 6), left, "Side targeting should target the tile in front of the side-facing feet.");
+    AssertEqual((6, 4), up, "Up should target the tile at the head anchor.");
 }
 
 static void WorldMapActionsChangeTileState()
@@ -542,8 +564,8 @@ static void PlayerRuntimeStartsFromPresetNeeds()
     AssertEqual(64, runtime.Needs.Hunger, "Runtime hunger should start from preset needs.");
     AssertEqual(0, runtime.Money, "Runtime money should start at zero.");
     AssertEqual(PlayerRuntimeFactory.DefaultAreaId, runtime.Location.AreaId, "Runtime location should start at the default area.");
-    AssertApprox(WorldMapFactory.DefaultPlayerTileX, runtime.Location.GetPositionX(), 0.001, "Runtime X position should start at the default spawn.");
-    AssertApprox(WorldMapFactory.DefaultPlayerTileY, runtime.Location.GetPositionY(), 0.001, "Runtime Y position should start at the default spawn.");
+    AssertApprox(WorldMapFactory.DefaultPlayerTileX + 0.5, runtime.Location.GetPositionX(), 0.001, "Runtime X position should start between the feet at the default spawn.");
+    AssertApprox(WorldMapFactory.DefaultPlayerTileY + 0.5, runtime.Location.GetPositionY(), 0.001, "Runtime Y position should start between the feet at the default spawn.");
 
     runtime.Needs.Energy = 10;
     AssertEqual(72, preset.Needs.Energy, "Changing runtime needs should not mutate preset needs.");
@@ -1003,7 +1025,7 @@ static void SaveGameRoundTripsCharacterPreset()
     AssertEqual(56, loaded.PlayerState.Needs.Hunger, "Save should keep runtime hunger.");
     AssertEqual("starter_farm", loaded.PlayerState.Location.AreaId, "Save should keep runtime area.");
     AssertEqual(7, loaded.PlayerState.Location.TileX, "Save should keep runtime tile X.");
-    AssertEqual(9, loaded.PlayerState.Location.TileY, "Save should keep runtime tile Y.");
+    AssertEqual(8, loaded.PlayerState.Location.TileY, "Save should keep runtime tile Y.");
     AssertApprox(7.35, loaded.PlayerState.Location.GetPositionX(), 0.001, "Save should keep fractional runtime X position.");
     AssertApprox(8.75, loaded.PlayerState.Location.GetPositionY(), 0.001, "Save should keep fractional runtime Y position.");
     AssertEqual(WorldMapTileStateIds.Watered, WorldMapRules.GetTile(loaded.WorldState.Map, 4, 5).StateId, "Save should keep map tile state.");
