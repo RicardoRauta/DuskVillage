@@ -27,8 +27,9 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     private readonly VerticalMenu _menu = new();
     private readonly CharacterAnimationState _playerAnimation = new();
     private Vector2 _visualTilePosition;
+    private WorldMapActionResult _pendingActionResult;
     private double _messageTimer;
-    private double _movementAnimationTimer;
+    private double _actionAnimationTimer;
     private double _blockedMovementTimer;
     private string _message = string.Empty;
 
@@ -63,7 +64,10 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         var moved = HandleMovement(gameTime);
         HandleActionHotkeys();
         UpdatePlayerAnimation(gameTime, moved);
-        _menu.Update(Context);
+        if (!IsActionAnimationActive())
+        {
+            _menu.Update(Context);
+        }
 
         if (_messageTimer > 0)
         {
@@ -112,6 +116,11 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private bool HandleMovement(GameTime gameTime)
     {
+        if (IsActionAnimationActive())
+        {
+            return false;
+        }
+
         var input = ReadMovementInput(Context.Input.Current);
         if (input.LengthSquared() <= 0.0001f)
         {
@@ -153,6 +162,11 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private void HandleActionHotkeys()
     {
+        if (IsActionAnimationActive())
+        {
+            return;
+        }
+
         var input = Context.Input.Current;
         if (input.WasKeyPressed(Context.Settings.Current.Input.Interact) || input.WasButtonPressed(Context.Settings.Current.Input.ControllerConfirm))
         {
@@ -167,6 +181,11 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private void ExecuteMapAction(string actionId)
     {
+        if (IsActionAnimationActive())
+        {
+            return;
+        }
+
         var target = TargetTile();
         var request = new GameActionRequest
         {
@@ -183,13 +202,19 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
             _session.PlayerState,
             _session.WorldMap);
 
-        _session.WorldTime = result.ActionResult.WorldTime;
-        _session.PlayerState = result.ActionResult.PlayerState;
-        _session.WorldMap = result.MapState;
         CharacterAnimationSystem.SetMotion(_playerAnimation, result.ActionResult.AnimationId, result.ActionResult.FacingDirection);
         _playerAnimation.ElapsedMilliseconds = 0;
-        _movementAnimationTimer = result.Succeeded ? 0.35 : 0;
-        ShowMessage(T(result.MessageKey));
+        if (result.Succeeded)
+        {
+            _pendingActionResult = result;
+            _actionAnimationTimer = AnimationDurationSeconds(result.ActionResult.AnimationId, result.ActionResult.FacingDirection);
+        }
+        else
+        {
+            _pendingActionResult = null;
+            _actionAnimationTimer = 0;
+            ShowMessage(T(result.MessageKey));
+        }
     }
 
     private void AdvanceOneHour()
@@ -349,18 +374,25 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private void UpdatePlayerAnimation(GameTime gameTime, bool moved)
     {
+        if (IsActionAnimationActive())
+        {
+            _actionAnimationTimer -= gameTime.ElapsedGameTime.TotalSeconds;
+            CharacterAnimationSystem.Advance(_playerAnimation, gameTime.ElapsedGameTime);
+            if (_actionAnimationTimer <= 0)
+            {
+                CompletePendingAction();
+            }
+
+            return;
+        }
+
         if (moved)
         {
             CharacterAnimationSystem.SetMotion(_playerAnimation, CharacterAnimationIds.Walk, _playerAnimation.FacingDirection);
         }
-        else if (_movementAnimationTimer <= 0)
+        else if (!IsActionAnimationActive())
         {
             CharacterAnimationSystem.SetMotion(_playerAnimation, CharacterAnimationIds.Idle, _playerAnimation.FacingDirection);
-        }
-
-        if (_movementAnimationTimer > 0)
-        {
-            _movementAnimationTimer -= gameTime.ElapsedGameTime.TotalSeconds;
         }
 
         CharacterAnimationSystem.Advance(_playerAnimation, gameTime.ElapsedGameTime);
@@ -428,6 +460,34 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         _visualTilePosition = new Vector2(
             (float)_session.PlayerState.Location.GetPositionX(),
             (float)_session.PlayerState.Location.GetPositionY());
+    }
+
+    private bool IsActionAnimationActive()
+    {
+        return _actionAnimationTimer > 0;
+    }
+
+    private void CompletePendingAction()
+    {
+        _actionAnimationTimer = 0;
+        if (_pendingActionResult == null)
+        {
+            return;
+        }
+
+        _session.WorldTime = _pendingActionResult.ActionResult.WorldTime;
+        _session.PlayerState = _pendingActionResult.ActionResult.PlayerState;
+        _session.WorldMap = _pendingActionResult.MapState;
+        ShowMessage(T(_pendingActionResult.MessageKey));
+        _pendingActionResult = null;
+        NormalizePlayerLocation();
+        SyncVisualPosition();
+    }
+
+    private static double AnimationDurationSeconds(string animationId, CharacterFacingDirection facingDirection)
+    {
+        var clip = CharacterAnimationCatalog.GetClip(animationId, facingDirection);
+        return clip.DurationMilliseconds / 1000.0;
     }
 
     private static string PositionText(double position)

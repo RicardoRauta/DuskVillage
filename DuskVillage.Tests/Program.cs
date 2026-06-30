@@ -45,6 +45,7 @@ var tests = new (string Name, Action Run)[]
     ("Character run guide stays separate from walk", CharacterRunGuideStaysSeparateFromWalk),
     ("Expanded character clips are four way", ExpandedCharacterClipsAreFourWay),
     ("Character animation timeline honors variable durations", CharacterAnimationTimelineHonorsVariableDurations),
+    ("Farming action clips advance beyond windup", FarmingActionClipsAdvanceBeyondWindup),
     ("Character animation keeps timeline across repeated walk motion", CharacterAnimationKeepsTimelineAcrossRepeatedWalkMotion),
     ("Character animation cell coordinates are stable", CharacterAnimationCellCoordinatesAreStable),
     ("Action registry validates definitions", ActionRegistryValidatesDefinitions),
@@ -783,6 +784,22 @@ static void CharacterAnimationTimelineHonorsVariableDurations()
 
     CharacterAnimationSystem.Advance(state, TimeSpan.FromMilliseconds(135));
     AssertEqual(50, CharacterAnimationSystem.GetCurrentFrame(state).CellIndex, "Frame 050 should start after the second 135ms frame.");
+}
+
+static void FarmingActionClipsAdvanceBeyondWindup()
+{
+    var plant = new CharacterAnimationState();
+    CharacterAnimationSystem.SetMotion(plant, CharacterAnimationIds.PlantSeeds, CharacterFacingDirection.Down);
+    CharacterAnimationSystem.Advance(plant, TimeSpan.FromMilliseconds(400));
+
+    var water = new CharacterAnimationState();
+    CharacterAnimationSystem.SetMotion(water, CharacterAnimationIds.Water, CharacterFacingDirection.Down);
+    CharacterAnimationSystem.Advance(water, TimeSpan.FromMilliseconds(350));
+
+    AssertEqual(12, CharacterAnimationSystem.GetCurrentFrame(plant).CellIndex, "Planting should reach the seed-drop frame after the windup.");
+    AssertEqual(133, CharacterAnimationSystem.GetCurrentFrame(water).CellIndex, "Watering should reach the pour frame after the windup.");
+    Assert(CharacterAnimationCatalog.GetClip(CharacterAnimationIds.PlantSeeds, CharacterFacingDirection.Down).DurationMilliseconds > 400, "Planting must stay active long enough to show more than its first frame.");
+    Assert(CharacterAnimationCatalog.GetClip(CharacterAnimationIds.Water, CharacterFacingDirection.Down).DurationMilliseconds > 350, "Watering must stay active long enough to show more than its first frame.");
 }
 
 static void CharacterAnimationKeepsTimelineAcrossRepeatedWalkMotion()

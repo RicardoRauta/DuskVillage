@@ -57,7 +57,7 @@ sleep, sleep/sit, thumbs up, mad stomp, shocked, laugh
 drink standing, sit on floor, impatient
 ```
 
-The gameplay placeholder uses this only as an animation preview. Pressing movement input changes the player preview between idle and walk, but map movement, collision, camera, and tile interaction belong to later modules.
+The gameplay placeholder now consumes the same animation module for movement and temporary farming actions. Movement input switches between idle and walk, while successful map actions such as planting and watering play their full non-looping clip duration before returning to idle. Movement, menu input, and repeated action hotkeys are blocked while that action clip is active so the body animation can reach its later frames. Map/action results are applied when the clip completes, which keeps new crops and watered states from appearing before the visible action finishes.
 
 The gameplay placeholder also exposes an animation preview screen. It is a temporary testing surface for this module and lets the developer choose clip, direction, playback, reset, and inspect the current cell, frame duration, `flipX`, and timeline position.
 
