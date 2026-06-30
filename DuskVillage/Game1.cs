@@ -2,6 +2,7 @@ using DuskVillage.Actions;
 using DuskVillage.CharacterAssets;
 using DuskVillage.Core;
 using DuskVillage.Input;
+using DuskVillage.InventoryAssets;
 using DuskVillage.Items;
 using DuskVillage.Localization;
 using DuskVillage.Rendering;
@@ -29,6 +30,9 @@ namespace DuskVillage
         private FileCharacterPresetStorage _characterPresetStorage;
         private GameActionRegistry _actionRegistry;
         private ItemDefinitionRegistry _itemRegistry;
+        private InventoryUiAssetCatalog _inventoryAssetCatalog;
+        private InventoryUiTextureProvider _inventoryUiTextureProvider;
+        private InventoryHotbarRenderer _inventoryHotbarRenderer;
         private SeasonalWorldAssetCatalog _worldAssetCatalog;
         private SeasonalWorldTextureProvider _seasonalWorldTextureProvider;
         private ManaSeedCharacterAssetCatalog _characterAssetCatalog;
@@ -76,6 +80,9 @@ namespace DuskVillage
             _characterPresetStorage = new FileCharacterPresetStorage(GameDirectories.CharacterPresetsDirectory);
             _actionRegistry = GameActionRegistry.LoadFromDirectories(GameDirectories.ActionDefinitionsDirectory);
             _itemRegistry = ItemDefinitionRegistry.LoadFromDirectories(GameDirectories.ItemDefinitionsDirectory);
+            _inventoryAssetCatalog = InventoryUiAssetCatalog.LoadFromDirectory(GameDirectories.InventoryAssetDefinitionsDirectory);
+            _inventoryUiTextureProvider = new InventoryUiTextureProvider(GraphicsDevice);
+            _inventoryHotbarRenderer = new InventoryHotbarRenderer(_inventoryAssetCatalog, _inventoryUiTextureProvider);
             _worldAssetCatalog = SeasonalWorldAssetCatalog.LoadFromDirectory(GameDirectories.WorldAssetDefinitionsDirectory);
             _seasonalWorldTextureProvider = new SeasonalWorldTextureProvider(GraphicsDevice);
             _characterAssetCatalog = ManaSeedCharacterAssetCatalog.Load(GameDirectories.ManaSeedFarmerSpriteZipPath);
@@ -97,6 +104,8 @@ namespace DuskVillage
                 _characterPresetStorage,
                 _actionRegistry,
                 _itemRegistry,
+                _inventoryAssetCatalog,
+                _inventoryHotbarRenderer,
                 _worldAssetCatalog,
                 _seasonalWorldTextureProvider,
                 _characterAssetCatalog,
@@ -129,6 +138,7 @@ namespace DuskVillage
         protected override void UnloadContent()
         {
             _seasonalWorldTextureProvider?.Dispose();
+            _inventoryUiTextureProvider?.Dispose();
             _characterTextureProvider?.Dispose();
             _pixel?.Dispose();
             _spriteBatch?.Dispose();

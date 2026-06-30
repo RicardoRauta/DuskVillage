@@ -10,6 +10,8 @@ public sealed class ItemDefinition
 
     public string DescriptionKey { get; set; } = string.Empty;
 
+    public string IconAssetId { get; set; } = string.Empty;
+
     public string Category { get; set; } = string.Empty;
 
     public int MaxStack { get; set; } = 99;

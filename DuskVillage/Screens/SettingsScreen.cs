@@ -240,6 +240,7 @@ public sealed class SettingsScreen : GameScreenBase
 
             _menu.Add(new GamePadBindingControl("settings.controller.confirm", () => _draft.Input.ControllerConfirm, value => _draft.Input.ControllerConfirm = value));
             _menu.Add(new GamePadBindingControl("settings.controller.back", () => _draft.Input.ControllerBack, value => _draft.Input.ControllerBack = value));
+            _menu.Add(new GamePadBindingControl("settings.controller.inventory", () => _draft.Input.ControllerInventory, value => _draft.Input.ControllerInventory = value));
             _menu.Add(new GamePadBindingControl("settings.controller.pause", () => _draft.Input.ControllerPause, value => _draft.Input.ControllerPause = value));
             _menu.Add(new GamePadBindingControl("settings.controller.move_up", () => _draft.Input.ControllerMoveUp, value => _draft.Input.ControllerMoveUp = value));
             _menu.Add(new GamePadBindingControl("settings.controller.move_down", () => _draft.Input.ControllerMoveDown, value => _draft.Input.ControllerMoveDown = value));
@@ -262,6 +263,7 @@ public sealed class SettingsScreen : GameScreenBase
         _menu.Add(new KeyBindingControl("settings.key.move_left", () => _draft.Input.MoveLeft, value => _draft.Input.MoveLeft = value));
         _menu.Add(new KeyBindingControl("settings.key.move_right", () => _draft.Input.MoveRight, value => _draft.Input.MoveRight = value));
         _menu.Add(new KeyBindingControl("settings.key.interact", () => _draft.Input.Interact, value => _draft.Input.Interact = value));
+        _menu.Add(new KeyBindingControl("settings.key.inventory", () => _draft.Input.Inventory, value => _draft.Input.Inventory = value));
         _menu.Add(new KeyBindingControl("settings.key.back", () => _draft.Input.Back, value => _draft.Input.Back = value));
         _menu.Add(new KeyBindingControl("settings.key.pause", () => _draft.Input.Pause, value => _draft.Input.Pause = value));
     }

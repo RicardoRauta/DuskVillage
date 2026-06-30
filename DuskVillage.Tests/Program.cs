@@ -4,14 +4,17 @@ using DuskVillage.CharacterAssets;
 using DuskVillage.Characters;
 using DuskVillage.Core;
 using DuskVillage.Inventory;
+using DuskVillage.InventoryAssets;
 using DuskVillage.Items;
 using DuskVillage.Needs;
 using DuskVillage.Players;
 using DuskVillage.Saving;
+using DuskVillage.Settings;
 using DuskVillage.World;
 using DuskVillage.WorldAssets;
 using DuskVillage.WorldMap;
 using System.IO.Compression;
+using Microsoft.Xna.Framework.Input;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -30,6 +33,9 @@ var tests = new (string Name, Action Run)[]
     ("Seasonal world asset catalog loads stable IDs", SeasonalWorldAssetCatalogLoadsStableIds),
     ("Content resolver finds nested local packs", ContentResolverFindsNestedLocalPacks),
     ("Seasonal world asset catalog supports missing zips", SeasonalWorldAssetCatalogSupportsMissingZips),
+    ("Inventory UI asset catalog loads stable IDs", InventoryUiAssetCatalogLoadsStableIds),
+    ("Inventory UI asset catalog supports missing zips", InventoryUiAssetCatalogSupportsMissingZips),
+    ("Input defaults open backpack with E", InputDefaultsOpenBackpackWithE),
     ("World map default has farm plot", WorldMapDefaultHasFarmPlot),
     ("World map movement respects passability", WorldMapMovementRespectsPassability),
     ("World map continuous movement supports fractional position", WorldMapContinuousMovementSupportsFractionalPosition),
@@ -39,6 +45,7 @@ var tests = new (string Name, Action Run)[]
     ("World map actions change tile state", WorldMapActionsChangeTileState),
     ("World map action rejects invalid tile", WorldMapActionRejectsInvalidTile),
     ("Inventory stacks and removes items", InventoryStacksAndRemovesItems),
+    ("Inventory operations keep owner inventories isolated", InventoryOperationsKeepOwnerInventoriesIsolated),
     ("Player runtime starts from preset needs", PlayerRuntimeStartsFromPresetNeeds),
     ("Old save player runtime normalizes", OldSavePlayerRuntimeNormalizes),
     ("Needs elapsed time changes runtime needs", NeedsElapsedTimeChangesRuntimeNeeds),
@@ -347,12 +354,129 @@ static void SeasonalWorldAssetCatalogSupportsMissingZips()
         AssertEqual("winter/trees", asset.StableId, "Missing assets should keep stable IDs.");
         Assert(!asset.ZipExists, "Asset should report missing zip.");
         Assert(!asset.EntryExists, "Asset should report missing zip entry.");
+    Assert(!asset.IsAvailable, "Asset should be unavailable when zip is missing.");
+    }
+    finally
+    {
+        DeleteTempDirectory(root);
+    }
+}
+
+static void InventoryUiAssetCatalogLoadsStableIds()
+{
+    var root = CreateTempDirectory();
+    try
+    {
+        var definitionsDirectory = Path.Combine(root, "definitions");
+        var contentDirectory = Path.Combine(root, "content");
+        var inventoryPacksDirectory = Path.Combine(contentDirectory, "Packs", "UI", "Inventory");
+        Directory.CreateDirectory(definitionsDirectory);
+        Directory.CreateDirectory(inventoryPacksDirectory);
+
+        File.WriteAllText(Path.Combine(definitionsDirectory, "inventory_assets.json"), """
+        [
+          {
+            "id": "traveler_backpack",
+            "labelKey": "inventory.skin.traveler_backpack",
+            "zipFileName": "backpack.zip",
+            "variantId": "green",
+            "assets": [
+              {
+                "id": "slot_holder",
+                "entryPath": "Sprites/Green/Categories/1 - Inventory/Sprites/Holders/0.png",
+                "width": 47,
+                "height": 48
+              }
+            ]
+          }
+        ]
+        """);
+        CreateZipWithEntries(
+            Path.Combine(inventoryPacksDirectory, "backpack.zip"),
+            "Sprites/Green/Categories/1 - Inventory/Sprites/Holders/0.png");
+
+        var catalog = InventoryUiAssetCatalog.LoadFromDirectories([definitionsDirectory], [contentDirectory]);
+
+        Assert(catalog.TryGetSkin(InventoryUiAssetIds.TravelerBackpackSkin, out var skin), "Catalog should load traveler backpack skin.");
+        AssertEqual("green", skin.VariantId, "Skin variant should load.");
+        Assert(skin.IsAvailable, "Skin should be available when a referenced zip entry exists.");
+
+        var asset = skin.FindAsset(InventoryUiAssetIds.SlotHolder);
+        Assert(asset != null, "Skin should find slot holder by stable ID.");
+        AssertEqual("traveler_backpack/slot_holder", asset.StableId, "Stable asset ID should combine skin and asset ID.");
+        AssertEqual(47, asset.Width, "Asset width should load.");
+        AssertEqual(48, asset.Height, "Asset height should load.");
+        Assert(asset.ZipExists, "Asset should report existing zip.");
+        Assert(asset.EntryExists, "Asset should report existing entry.");
+        Assert(asset.IsAvailable, "Asset should be available when zip and entry exist.");
+    }
+    finally
+    {
+        DeleteTempDirectory(root);
+    }
+}
+
+static void InventoryUiAssetCatalogSupportsMissingZips()
+{
+    var root = CreateTempDirectory();
+    try
+    {
+        var definitionsDirectory = Path.Combine(root, "definitions");
+        var contentDirectory = Path.Combine(root, "content");
+        Directory.CreateDirectory(definitionsDirectory);
+        Directory.CreateDirectory(contentDirectory);
+
+        File.WriteAllText(Path.Combine(definitionsDirectory, "inventory_assets.json"), """
+        [
+          {
+            "id": "traveler_backpack",
+            "labelKey": "inventory.skin.traveler_backpack",
+            "zipFileName": "missing.zip",
+            "variantId": "green",
+            "assets": [
+              {
+                "id": "slot_highlight",
+                "entryPath": "Sprites/Green/Categories/1 - Inventory/Sprites/HighLighter/0.png",
+                "width": 61,
+                "height": 59
+              }
+            ]
+          }
+        ]
+        """);
+
+        var catalog = InventoryUiAssetCatalog.LoadFromDirectories([definitionsDirectory], [contentDirectory]);
+
+        Assert(catalog.TryGetSkin(InventoryUiAssetIds.TravelerBackpackSkin, out var skin), "Catalog should load definition even when zip is missing.");
+        Assert(!skin.IsAvailable, "Skin should be unavailable when the zip is missing.");
+
+        var asset = skin.FindAsset(InventoryUiAssetIds.SlotHighlight);
+        Assert(asset != null, "Missing zip should not remove the asset definition.");
+        AssertEqual("traveler_backpack/slot_highlight", asset.StableId, "Missing assets should keep stable IDs.");
+        Assert(!asset.ZipExists, "Asset should report missing zip.");
+        Assert(!asset.EntryExists, "Asset should report missing entry.");
         Assert(!asset.IsAvailable, "Asset should be unavailable when zip is missing.");
     }
     finally
     {
         DeleteTempDirectory(root);
     }
+}
+
+static void InputDefaultsOpenBackpackWithE()
+{
+    var defaults = GameSettings.CreateDefault();
+
+    AssertEqual(Keys.E, defaults.Input.Inventory, "Default inventory key should open the backpack with E.");
+    AssertEqual(Keys.F, defaults.Input.Interact, "Default use-selected key should avoid conflicting with backpack.");
+
+    var legacy = GameSettings.CreateDefault();
+    legacy.Input.Inventory = Keys.I;
+    legacy.Input.Interact = Keys.E;
+    legacy.Normalize();
+
+    AssertEqual(Keys.E, legacy.Input.Inventory, "Legacy inventory key should migrate to E.");
+    AssertEqual(Keys.F, legacy.Input.Interact, "Legacy interact key should migrate away from E.");
 }
 
 static void WorldMapDefaultHasFarmPlot()
@@ -538,6 +662,8 @@ static void InventoryStacksAndRemovesItems()
     var items = CreateTestItemRegistry();
     var inventory = InventorySystem.CreateDefault();
 
+    AssertEqual("backpack_icon_seeds", items.Find(ItemIds.StarterSeeds).IconAssetId, "Item definitions should keep stable icon asset IDs.");
+
     var added = InventorySystem.AddItem(inventory, ItemIds.StarterSeeds, 120, items);
     Assert(added.Succeeded, "Adding seeds should succeed.");
     AssertEqual(120, InventoryQuantity(added.Inventory, ItemIds.StarterSeeds), "Inventory should keep the full seed quantity.");
@@ -549,6 +675,20 @@ static void InventoryStacksAndRemovesItems()
 
     var selected = InventorySystem.SelectHotbarSlot(removed.Inventory, 0, items);
     AssertEqual(ItemIds.StarterSeeds, InventorySystem.GetSelectedHotbarSlot(selected, items).ItemId, "Hotbar selection should expose selected slot.");
+}
+
+static void InventoryOperationsKeepOwnerInventoriesIsolated()
+{
+    var items = CreateTestItemRegistry();
+    var playerInventory = InventorySystem.CreateStarterInventory(items);
+    var npcInventory = InventorySystem.CreateDefault();
+
+    var updatedNpc = InventorySystem.AddItem(npcInventory, ItemIds.StarterSeeds, 3, items);
+
+    Assert(updatedNpc.Succeeded, "NPC inventory operation should succeed.");
+    AssertEqual(15, InventoryQuantity(playerInventory, ItemIds.StarterSeeds), "Player inventory should not change when an NPC inventory changes.");
+    AssertEqual(0, InventoryQuantity(npcInventory, ItemIds.StarterSeeds), "Original NPC inventory state should remain unchanged.");
+    AssertEqual(3, InventoryQuantity(updatedNpc.Inventory, ItemIds.StarterSeeds), "Updated NPC inventory should receive the item stack.");
 }
 
 static void OldSaveWorldTimeNormalizes()
@@ -1173,12 +1313,14 @@ static ItemDefinitionRegistry CreateTestItemRegistry()
         {
             Id = ItemIds.StarterSeeds,
             LabelKey = "item.starter_seeds",
+            IconAssetId = "backpack_icon_seeds",
             MaxStack = 99
         },
         new ItemDefinition
         {
             Id = ItemIds.WateringCanBasic,
             LabelKey = "item.watering_can_basic",
+            IconAssetId = "backpack_icon_water",
             MaxStack = 1
         }
     ]);

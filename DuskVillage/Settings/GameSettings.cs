@@ -40,13 +40,15 @@ public sealed class GameSettings
                 MoveDown = Keys.S,
                 MoveLeft = Keys.A,
                 MoveRight = Keys.D,
-                Interact = Keys.E,
+                Interact = Keys.F,
+                Inventory = Keys.E,
                 Back = Keys.Escape,
                 Pause = Keys.P,
                 MouseSensitivity = 1f,
                 ControllerSensitivity = 1f,
                 ControllerConfirm = Buttons.A,
                 ControllerBack = Buttons.B,
+                ControllerInventory = Buttons.Y,
                 ControllerPause = Buttons.Start,
                 ControllerMoveUp = Buttons.DPadUp,
                 ControllerMoveDown = Buttons.DPadDown,
@@ -108,6 +110,32 @@ public sealed class GameSettings
         Audio.EffectsVolume = Math.Clamp(Audio.EffectsVolume, 0f, 1f);
         Input.MouseSensitivity = Math.Clamp(Input.MouseSensitivity, 0.25f, 2f);
         Input.ControllerSensitivity = Math.Clamp(Input.ControllerSensitivity, 0.25f, 2f);
+        if (Input.Inventory == Keys.None)
+        {
+            Input.Inventory = defaults.Input.Inventory;
+        }
+
+        if (Input.Interact == Keys.None)
+        {
+            Input.Interact = defaults.Input.Interact;
+        }
+
+        if (Input.Inventory == Input.Interact)
+        {
+            Input.Inventory = defaults.Input.Inventory;
+            Input.Interact = defaults.Input.Interact;
+        }
+
+        if (Input.Interact == Keys.E && Input.Inventory == Keys.I)
+        {
+            Input.Inventory = defaults.Input.Inventory;
+            Input.Interact = defaults.Input.Interact;
+        }
+
+        if (Input.ControllerInventory == Input.ControllerConfirm)
+        {
+            Input.ControllerInventory = defaults.Input.ControllerInventory;
+        }
     }
 }
 
@@ -175,7 +203,9 @@ public sealed class InputSettings
 
     public Keys MoveRight { get; set; } = Keys.D;
 
-    public Keys Interact { get; set; } = Keys.E;
+    public Keys Interact { get; set; } = Keys.F;
+
+    public Keys Inventory { get; set; } = Keys.E;
 
     public Keys Back { get; set; } = Keys.Escape;
 
@@ -188,6 +218,8 @@ public sealed class InputSettings
     public Buttons ControllerConfirm { get; set; } = Buttons.A;
 
     public Buttons ControllerBack { get; set; } = Buttons.B;
+
+    public Buttons ControllerInventory { get; set; } = Buttons.Y;
 
     public Buttons ControllerPause { get; set; } = Buttons.Start;
 
@@ -208,12 +240,14 @@ public sealed class InputSettings
             MoveLeft = MoveLeft,
             MoveRight = MoveRight,
             Interact = Interact,
+            Inventory = Inventory,
             Back = Back,
             Pause = Pause,
             MouseSensitivity = MouseSensitivity,
             ControllerSensitivity = ControllerSensitivity,
             ControllerConfirm = ControllerConfirm,
             ControllerBack = ControllerBack,
+            ControllerInventory = ControllerInventory,
             ControllerPause = ControllerPause,
             ControllerMoveUp = ControllerMoveUp,
             ControllerMoveDown = ControllerMoveDown,

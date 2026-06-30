@@ -131,6 +131,7 @@ public sealed class ItemDefinitionRegistry
         definition.Id = definition.Id.Trim();
         definition.LabelKey = definition.LabelKey.Trim();
         definition.DescriptionKey = definition.DescriptionKey?.Trim() ?? string.Empty;
+        definition.IconAssetId = definition.IconAssetId?.Trim() ?? string.Empty;
         definition.Category = definition.Category?.Trim() ?? string.Empty;
         definition.Tags ??= new List<string>();
     }

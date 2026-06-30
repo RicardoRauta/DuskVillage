@@ -62,11 +62,31 @@ Current controls:
 
 ```text
 1-8: select hotbar slot
-Interact/E: use selected item action
+E/Y: open backpack
+F/A: use selected item action
 R/controller X: debug shortcut for watering
 ```
 
-The hotbar UI currently uses simple rectangles and text. Local UI packs under `DuskVillage/Content/Packs/UI/Inventory` should be used in a later UI skinning topic. Those paid/local assets stay ignored by Git.
+The gameplay hotbar uses the local Backpack UI pack when it is present:
+
+```text
+DuskVillage/Content/Packs/UI/Inventory/Pocket Inventory Series #8 BackPack v1.1.zip
+```
+
+Only JSON references to the zip file and entry paths are versioned. The paid/local PNG files remain ignored by Git.
+
+If the zip is missing, the hotbar falls back to simple rectangles and text.
+
+The current Backpack skin uses:
+
+```text
+BackPack idle frame
+Inventory holder
+Inventory highlighter
+small item icons
+```
+
+The pack also includes open/close pouch animations and inventory appear/disappear frames. Those animation folders were inspected and should drive the next inventory-screen topic; the first gameplay hotbar uses static frames so action readability stays stable.
 
 ## Action Integration
 
@@ -100,13 +120,30 @@ UI reads labels through localization keys
 
 That means future mods can add item definition JSON and action JSON without changing save state shapes. A later mod loader can add mod directories to the item and action registries.
 
+## NPC and Multiplayer Compatibility
+
+`InventoryState` is intentionally owner-agnostic. It does not store "player" inside the inventory itself. A player, NPC, chest, or remote multiplayer entity can each own an `InventoryState` from its own runtime/save component.
+
+Inventory operations clone and return a new state instead of mutating unrelated owners. Rendering receives an `InventoryState` as input, so the same hotbar/inventory renderer can later draw:
+
+```text
+local player inventory
+NPC inventory
+trade partner inventory
+chest inventory
+remote player inspection inventory
+```
+
+Texture caches are client-side rendering data and should not be synchronized over the network. Multiplayer sync should send item IDs, quantities, selected hotbar index, and authoritative inventory operation results.
+
 ## Next Work
 
 The next inventory-related topic should focus on presentation and item use depth:
 
 ```text
-draw the hotbar with backpack/book asset skins
 add an inventory screen
+play backpack open/close and category appear/disappear animations
+add Adventure Book skin for village roles/jobs
 add item icons once icon catalogs are mapped
 add harvest items when crop growth is implemented
 add tool tiers when equipment progression starts

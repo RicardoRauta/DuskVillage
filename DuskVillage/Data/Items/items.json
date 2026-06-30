@@ -3,6 +3,7 @@
     "id": "starter_seeds",
     "labelKey": "item.starter_seeds",
     "descriptionKey": "item.starter_seeds.description",
+    "iconAssetId": "backpack_icon_seeds",
     "category": "seed",
     "maxStack": 99,
     "tags": [ "seed", "farming" ]
@@ -11,6 +12,7 @@
     "id": "watering_can_basic",
     "labelKey": "item.watering_can_basic",
     "descriptionKey": "item.watering_can_basic.description",
+    "iconAssetId": "backpack_icon_water",
     "category": "tool",
     "maxStack": 1,
     "tags": [ "tool", "watering", "farming" ]

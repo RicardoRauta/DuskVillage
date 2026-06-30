@@ -38,6 +38,11 @@ public static class GameDirectories
         "Data",
         "Items");
 
+    public static string InventoryAssetDefinitionsDirectory => Path.Combine(
+        AppContext.BaseDirectory,
+        "Data",
+        "InventoryAssets");
+
     public static string WorldAssetDefinitionsDirectory => Path.Combine(
         AppContext.BaseDirectory,
         "Data",

@@ -49,6 +49,8 @@ Pocket Inventory Series #7 Gems of Status.zip - useful for status/equipment UI p
 
 The inspected UI packs expose buttons, slots, holders, icons, and category art, but no dedicated keyboard hotkey glyph set. Hotkeys should be rendered as text labels over button or slot sprites until a dedicated key glyph pack is added.
 
+BackPack has pouch open/close animations and Inventory category appear/disappear frames. Adventure Book has book open/close and page-flip animations. Gems of Status is better suited to status, clock, weather, and condition displays than the main inventory hotbar.
+
 ## Runtime Loading
 
 `SeasonalWorldAssetCatalog` reads JSON definitions from `Data/WorldAssets` and resolves zip files from known `Content` locations, including nested pack folders. Missing zips or missing entries do not crash catalog loading; the affected assets are marked unavailable.

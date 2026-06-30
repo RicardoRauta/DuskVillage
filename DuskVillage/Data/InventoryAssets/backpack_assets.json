@@ -1,0 +1,47 @@
+[
+  {
+    "id": "traveler_backpack",
+    "labelKey": "inventory.skin.traveler_backpack",
+    "zipFileName": "Pocket Inventory Series #8 BackPack v1.1.zip",
+    "variantId": "green",
+    "assets": [
+      {
+        "id": "backpack_idle",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/BackPack/1 - idle/0.png",
+        "width": 16,
+        "height": 16,
+        "frameDurationMilliseconds": 120
+      },
+      {
+        "id": "slot_holder",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/Holders/0.png",
+        "width": 47,
+        "height": 48
+      },
+      {
+        "id": "slot_highlight",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/HighLighter/0.png",
+        "width": 61,
+        "height": 59
+      },
+      {
+        "id": "backpack_icon_water",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/items/3.png",
+        "width": 16,
+        "height": 16
+      },
+      {
+        "id": "backpack_icon_seeds",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/items/4.png",
+        "width": 16,
+        "height": 16
+      },
+      {
+        "id": "backpack_icon_unknown",
+        "entryPath": "Pocket Inventory Series #8 BackPack v1.1/Sprites/Green/Categories/1 - Inventory/Sprites/items/0.png",
+        "width": 16,
+        "height": 16
+      }
+    ]
+  }
+]

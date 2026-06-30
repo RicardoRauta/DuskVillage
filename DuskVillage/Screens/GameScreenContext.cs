@@ -2,6 +2,7 @@ using System;
 using DuskVillage.Actions;
 using DuskVillage.CharacterAssets;
 using DuskVillage.Input;
+using DuskVillage.InventoryAssets;
 using DuskVillage.Items;
 using DuskVillage.Localization;
 using DuskVillage.Rendering;
@@ -28,6 +29,8 @@ public sealed class GameScreenContext
         ICharacterPresetStorage characterPresetStorage,
         GameActionRegistry actions,
         ItemDefinitionRegistry items,
+        InventoryUiAssetCatalog inventoryAssets,
+        InventoryHotbarRenderer inventoryHotbarRenderer,
         SeasonalWorldAssetCatalog worldAssets,
         SeasonalWorldTextureProvider seasonalWorldTextures,
         ManaSeedCharacterAssetCatalog characterAssets,
@@ -50,6 +53,8 @@ public sealed class GameScreenContext
         CharacterPresetStorage = characterPresetStorage;
         Actions = actions ?? GameActionRegistry.Empty;
         Items = items ?? ItemDefinitionRegistry.Empty;
+        InventoryAssets = inventoryAssets ?? InventoryUiAssetCatalog.Empty;
+        InventoryHotbarRenderer = inventoryHotbarRenderer ?? new InventoryHotbarRenderer(InventoryAssets, null);
         WorldAssets = worldAssets;
         SeasonalWorldTextures = seasonalWorldTextures;
         CharacterAssets = characterAssets;
@@ -84,6 +89,10 @@ public sealed class GameScreenContext
     public GameActionRegistry Actions { get; }
 
     public ItemDefinitionRegistry Items { get; }
+
+    public InventoryUiAssetCatalog InventoryAssets { get; }
+
+    public InventoryHotbarRenderer InventoryHotbarRenderer { get; }
 
     public SeasonalWorldAssetCatalog WorldAssets { get; }
 

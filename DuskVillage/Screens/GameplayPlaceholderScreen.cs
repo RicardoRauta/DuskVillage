@@ -33,6 +33,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     private double _messageTimer;
     private double _actionAnimationTimer;
     private double _blockedMovementTimer;
+    private bool _inventoryOpen;
     private string _message = string.Empty;
 
     public GameplayPlaceholderScreen(GameScreenContext context, GameSessionSummary session)
@@ -46,6 +47,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
         _menu.Add(new ButtonControl("action.plant_seeds", () => ExecuteMapAction("action_plant_seeds")));
         _menu.Add(new ButtonControl("action.water", () => ExecuteMapAction("action_water")));
+        _menu.Add(new ButtonControl("inventory.open", ToggleInventory));
         _menu.Add(new ButtonControl("gameplay.advance_hour", AdvanceOneHour));
         _menu.Add(new ButtonControl("gameplay.sleep", SleepToNextDay));
         _menu.Add(new ButtonControl("gameplay.actions", OpenActionPreview));
@@ -57,9 +59,28 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     public override void Update(GameTime gameTime)
     {
+        if (_inventoryOpen)
+        {
+            if (InventoryRequested() || BackRequested())
+            {
+                _inventoryOpen = false;
+            }
+
+            UpdateTimers(gameTime);
+            CharacterAnimationSystem.SetMotion(_playerAnimation, CharacterAnimationIds.Idle, _playerAnimation.FacingDirection);
+            CharacterAnimationSystem.Advance(_playerAnimation, gameTime.ElapsedGameTime);
+            return;
+        }
+
         if (BackRequested())
         {
             ReturnToMainMenu();
+            return;
+        }
+
+        if (InventoryRequested())
+        {
+            _inventoryOpen = true;
             return;
         }
 
@@ -72,15 +93,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
             _menu.Update(Context);
         }
 
-        if (_messageTimer > 0)
-        {
-            _messageTimer -= gameTime.ElapsedGameTime.TotalSeconds;
-        }
-
-        if (_blockedMovementTimer > 0)
-        {
-            _blockedMovementTimer -= gameTime.ElapsedGameTime.TotalSeconds;
-        }
+        UpdateTimers(gameTime);
     }
 
     public override void Draw(GameTime gameTime)
@@ -109,6 +122,10 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         DrawInfoPanel(draw, layout.InfoPanel, target);
         _menu.Draw(draw);
         DrawHotbar(draw, hotbarBounds);
+        if (_inventoryOpen)
+        {
+            DrawInventoryOverlay(draw);
+        }
 
         if (_messageTimer > 0 && !string.IsNullOrWhiteSpace(_message))
         {
@@ -174,6 +191,12 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
         var input = Context.Input.Current;
         HandleHotbarSelection(input);
+        if (InventoryRequested())
+        {
+            _inventoryOpen = true;
+            return;
+        }
+
         if (input.WasKeyPressed(Context.Settings.Current.Input.Interact) || input.WasButtonPressed(Context.Settings.Current.Input.ControllerConfirm))
         {
             ExecuteSelectedItemAction();
@@ -318,30 +341,7 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
 
     private void DrawHotbar(UiDrawContext draw, Rectangle bounds)
     {
-        var inventory = InventorySystem.Normalize(_session.PlayerState.Inventory, Context.Items);
-        var slotSize = bounds.Height;
-        var gap = Math.Max(4, (int)(6 * UiScale));
-        for (var i = 0; i < inventory.HotbarSize; i++)
-        {
-            var slotBounds = new Rectangle(bounds.X + i * (slotSize + gap), bounds.Y, slotSize, slotSize);
-            var selected = i == inventory.SelectedHotbarIndex;
-            draw.Fill(slotBounds, selected ? new Color(44, 48, 42, 236) : draw.Theme.Panel);
-            draw.Border(slotBounds, selected ? draw.Theme.Accent : draw.Theme.Border, selected ? 3 : 2);
-            draw.Text((i + 1).ToString(CultureInfo.InvariantCulture), new Vector2(slotBounds.X + 5, slotBounds.Y + 4), draw.Theme.MutedText, 0.48f);
-
-            if (i >= inventory.Slots.Count || inventory.Slots[i].IsEmpty)
-            {
-                draw.CenteredText("-", slotBounds, draw.Theme.MutedText, 0.76f);
-                continue;
-            }
-
-            var slot = inventory.Slots[i];
-            draw.CenteredText(ShortItemLabel(slot.ItemId), new Rectangle(slotBounds.X + 4, slotBounds.Y + 12, slotBounds.Width - 8, slotBounds.Height - 20), draw.Theme.Text, 0.5f);
-            if (slot.Quantity > 1)
-            {
-                draw.RightAlignedText(slot.Quantity.ToString(CultureInfo.InvariantCulture), slotBounds.Right - 5, slotBounds.Bottom - 18, draw.Theme.Accent, 0.52f);
-            }
-        }
+        Context.InventoryHotbarRenderer.Draw(draw, _session.PlayerState.Inventory, Context.Items, bounds);
     }
 
     private void DrawLine(UiDrawContext draw, string text, int x, ref int y, Color color, float scale = 1f)
@@ -374,12 +374,12 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     private Rectangle HotbarBounds()
     {
         var bounds = Context.ViewBounds;
-        var slotSize = Math.Clamp((int)(56 * UiScale), 44, 68);
-        var gap = Math.Max(4, (int)(6 * UiScale));
+        var slotSize = Context.InventoryHotbarRenderer.PreferredSlotSize(UiScale);
+        var gap = Context.InventoryHotbarRenderer.PreferredGap(UiScale);
         var inventory = InventorySystem.Normalize(_session.PlayerState.Inventory, Context.Items);
-        var width = inventory.HotbarSize * slotSize + (inventory.HotbarSize - 1) * gap;
-        var y = bounds.Bottom - Math.Max(14, (int)(18 * UiScale)) - slotSize;
-        return new Rectangle(bounds.X + (bounds.Width - width) / 2, y, width, slotSize);
+        var width = inventory.HotbarSize * slotSize.X + (inventory.HotbarSize - 1) * gap;
+        var y = bounds.Bottom - Math.Max(14, (int)(18 * UiScale)) - slotSize.Y;
+        return new Rectangle(bounds.X + (bounds.Width - width) / 2, y, width, slotSize.Y);
     }
 
     private (int X, int Y) TargetTile()
@@ -391,6 +391,40 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
     {
         _message = message;
         _messageTimer = 2.5;
+    }
+
+    private void DrawInventoryOverlay(UiDrawContext draw)
+    {
+        var bounds = Context.ViewBounds;
+        draw.Fill(bounds, new Color(0, 0, 0, 126));
+
+        var inventory = InventorySystem.Normalize(_session.PlayerState.Inventory, Context.Items);
+        var columns = inventory.HotbarSize;
+        var rows = Math.Max(1, (int)Math.Ceiling(inventory.Capacity / (double)columns));
+        var slotSize = Context.InventoryHotbarRenderer.PreferredSlotSize(UiScale);
+        var gap = Context.InventoryHotbarRenderer.PreferredGap(UiScale);
+        var padding = Math.Max(20, 24 * PixelScale());
+        var headerHeight = Math.Max(58, 46 * PixelScale());
+        var gridWidth = columns * slotSize.X + (columns - 1) * gap;
+        var gridHeight = rows * slotSize.Y + (rows - 1) * gap;
+        var panel = new Rectangle(
+            bounds.X + (bounds.Width - gridWidth - padding * 2) / 2,
+            bounds.Y + (bounds.Height - gridHeight - headerHeight - padding * 2) / 2,
+            gridWidth + padding * 2,
+            gridHeight + headerHeight + padding * 2);
+
+        draw.Fill(panel, new Color(28, 31, 30, 244));
+        draw.Border(panel, draw.Theme.Border, 2);
+        draw.Text(T("inventory.title"), new Vector2(panel.X + padding, panel.Y + padding - 4), draw.Theme.Accent, 1.15f);
+        draw.RightAlignedText(T("inventory.close_hint"), panel.Right - padding, panel.Y + padding + 4, draw.Theme.MutedText, 0.62f);
+
+        var grid = new Rectangle(panel.X + padding, panel.Y + padding + headerHeight, gridWidth, gridHeight);
+        Context.InventoryHotbarRenderer.DrawGrid(draw, inventory, Context.Items, grid, columns);
+    }
+
+    private int PixelScale()
+    {
+        return Math.Clamp((int)Math.Round(UiScale), 1, 4);
     }
 
     private string NeedsMessage(bool forcedDayEnd, NeedsSimulationResult result)
@@ -520,6 +554,18 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         }
     }
 
+    private bool InventoryRequested()
+    {
+        var input = Context.Input.Current;
+        return input.WasKeyPressed(Context.Settings.Current.Input.Inventory) ||
+            input.WasButtonPressed(Context.Settings.Current.Input.ControllerInventory);
+    }
+
+    private void ToggleInventory()
+    {
+        _inventoryOpen = !_inventoryOpen;
+    }
+
     private void ExecuteSelectedItemAction()
     {
         var slot = InventorySystem.GetSelectedHotbarSlot(_session.PlayerState.Inventory, Context.Items);
@@ -556,15 +602,22 @@ public sealed class GameplayPlaceholderScreen : GameScreenBase
         return definition == null ? itemId : T(definition.LabelKey);
     }
 
-    private string ShortItemLabel(string itemId)
-    {
-        var label = ItemLabel(itemId);
-        return label.Length <= 10 ? label : label[..10];
-    }
-
     private bool IsActionAnimationActive()
     {
         return _actionAnimationTimer > 0;
+    }
+
+    private void UpdateTimers(GameTime gameTime)
+    {
+        if (_messageTimer > 0)
+        {
+            _messageTimer -= gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
+        if (_blockedMovementTimer > 0)
+        {
+            _blockedMovementTimer -= gameTime.ElapsedGameTime.TotalSeconds;
+        }
     }
 
     private void CompletePendingAction()
